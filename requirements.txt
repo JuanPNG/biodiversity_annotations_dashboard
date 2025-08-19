@@ -1,0 +1,6 @@
+pandas
+pyarrow
+python-dotenv
+plotly
+dash
+dash-ag-grid
