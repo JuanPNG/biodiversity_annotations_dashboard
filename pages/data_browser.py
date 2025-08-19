@@ -11,39 +11,53 @@ layout = html.Main(
         html.H2("Data Browser"),
         html.P("Server-side paging; column-pruned reads with filter pushdown."),
 
-        # Preset + Columns (aligned via CSS)
-        html.Div(
-            [
-                html.Div(
+        # Collapsible: Columns & Presets (hidden by default)
+        html.Details(
+            id="db-columns-panel",
+            open=False,  # hidden by default
+            className="collapsible",
+            children=[
+                html.Summary(
                     [
-                        html.Label("Column preset", className="control-label"),
-                        dcc.Dropdown(
-                            id="db-col-preset",
-                            options=[],
-                            value=None,
-                            clearable=False,
-                            style={"width": "100%"},
-                        ),
+                        html.Span("Columns & presets "),
+                        html.Span("(0 selected)", id="db-columns-count", className="badge"),
                     ],
-                    className="db-control db-control--narrow",
+                    className="collapsible-summary",
                 ),
                 html.Div(
                     [
-                        html.Label("Columns", className="control-label"),
-                        dcc.Dropdown(
-                            id="db-columns",
-                            options=[],
-                            value=[],
-                            multi=True,
-                            placeholder="Type to search columns…",
-                            style={"width": "100%"},
+                        html.Div(
+                            [
+                                html.Label("Column preset", className="control-label"),
+                                dcc.Dropdown(
+                                    id="db-col-preset",
+                                    options=[],
+                                    value=None,
+                                    clearable=False,
+                                    style={"width": "100%"},
+                                ),
+                            ],
+                            className="db-control db-control--narrow",
                         ),
-                        html.Small("Tip: click and type to search."),
+                        html.Div(
+                            [
+                                html.Label("Columns", className="control-label"),
+                                dcc.Dropdown(
+                                    id="db-columns",
+                                    options=[],
+                                    value=[],
+                                    multi=True,
+                                    placeholder="Type to search columns…",
+                                    style={"width": "100%"},
+                                ),
+                                html.Small("Tip: click and type to search."),
+                            ],
+                            className="db-control db-control--wide",
+                        ),
                     ],
-                    className="db-control db-control--wide",
+                    className="db-controls",
                 ),
             ],
-            className="db-controls",
         ),
 
         html.Div(

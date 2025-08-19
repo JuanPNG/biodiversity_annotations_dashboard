@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
 import pandas as pd
+import pyarrow as pa
+import pyarrow.types as pat
 import pyarrow.dataset as ds
 
 from utils import config
@@ -55,20 +57,48 @@ def get_biogeo_tags_for_accessions_by_level(accessions: Sequence[str], levels: S
         out[acc] = slot
     return out
 
-def _build_filter_expr(taxonomy_filter: Optional[Sequence[str]], climate_filter: Optional[Sequence[str]], accession_filter: Optional[Sequence[str]]):
+def _build_filter_expr(
+    dset: ds.Dataset,
+    taxonomy_filter: Optional[Sequence[str]],
+    climate_filter: Optional[Sequence[str]],
+    accession_filter: Optional[Sequence[str]],
+    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
+):
+    """
+    Combine equality filters into a single dataset expression (AND).
+    Supports multi-rank taxonomy via taxonomy_filter_map.
+    """
     expr = None
-    if taxonomy_filter and config.TAXONOMY_COL:
-        e = ds.field(config.TAXONOMY_COL).isin(list(taxonomy_filter))
-        expr = e if expr is None else (expr & e)
+
+    # Preferred: multi-rank taxonomy map (e.g., {"family": [...], "genus":[...]})
+    if taxonomy_filter_map:
+        for col, vals in taxonomy_filter_map.items():
+            coerced = _coerce_values_for_column(dset, col, vals)
+            if coerced:
+                e = ds.field(col).isin(coerced)
+                expr = e if expr is None else (expr & e)
+
+    # Legacy single taxonomy column (only used if provided & configured)
+    if (not taxonomy_filter_map) and taxonomy_filter and config.TAXONOMY_COL:
+        coerced = _coerce_values_for_column(dset, config.TAXONOMY_COL, taxonomy_filter)
+        if coerced:
+            e = ds.field(config.TAXONOMY_COL).isin(coerced)
+            expr = e if expr is None else (expr & e)
+
+    # Optional legacy categorical climate (yours is None, so this will be skipped)
     if climate_filter and config.CLIMATE_LABEL_COL:
-        e = ds.field(config.CLIMATE_LABEL_COL).isin(list(climate_filter))
-        expr = e if expr is None else (expr & e)
+        coerced = _coerce_values_for_column(dset, config.CLIMATE_LABEL_COL, climate_filter)
+        if coerced:
+            e = ds.field(config.CLIMATE_LABEL_COL).isin(coerced)
+            expr = e if expr is None else (expr & e)
+
     if accession_filter and config.ACCESSION_COL_MAIN:
         e = ds.field(config.ACCESSION_COL_MAIN).isin(list(accession_filter))
         expr = e if expr is None else (expr & e)
+
     return expr
 
-# utils/parquet_io.py  — replace list_biotype_columns() and summarize_biotypes()
+
 
 def list_biotype_columns() -> dict[str, list[str]]:
     """
@@ -178,6 +208,7 @@ def load_dashboard_page(
     page_number: int,
     page_size: int,
     taxonomy_filter: Optional[Sequence[str]] = None,
+    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
     climate_filter: Optional[Sequence[str]] = None,
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
@@ -203,7 +234,13 @@ def load_dashboard_page(
             return pd.DataFrame(columns=use_cols), 0
         accession_filter = list(accs)
 
-    expr = _build_filter_expr(taxonomy_filter, climate_filter, accession_filter)
+    expr = _build_filter_expr(
+        dset=dset,
+        taxonomy_filter=taxonomy_filter,
+        climate_filter=climate_filter,
+        accession_filter=accession_filter,
+        taxonomy_filter_map=taxonomy_filter_map,
+    )
 
     # Page window
     page = max(1, int(page_number or 1))
@@ -247,6 +284,7 @@ def load_dashboard_page(
 def count_dashboard_rows(
     *,
     taxonomy_filter: Optional[Sequence[str]] = None,
+    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
     climate_filter: Optional[Sequence[str]] = None,
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
@@ -273,7 +311,13 @@ def count_dashboard_rows(
             return 0
         accession_filter = list(accs)
 
-    expr = _build_filter_expr(taxonomy_filter, climate_filter, accession_filter)
+    expr = _build_filter_expr(
+        dset=dset,
+        taxonomy_filter=taxonomy_filter,
+        climate_filter=climate_filter,
+        accession_filter=accession_filter,
+        taxonomy_filter_map=taxonomy_filter_map,
+    )
 
     # Fast path (available in recent pyarrow)
     try:
@@ -289,3 +333,78 @@ def count_dashboard_rows(
     for rb in scanner.to_batches():
         total += rb.num_rows
     return total
+
+
+def _coerce_values_for_column(dset: ds.Dataset, column: str, vals: Sequence) -> list:
+    """Coerce dropdown string values to the Arrow column dtype (int/float/str)."""
+    if not vals:
+        return []
+    try:
+        pa_type = dset.schema.field(column).type
+    except Exception:
+        pa_type = pa.string()
+
+    out = []
+    for v in vals:
+        if v is None:
+            continue
+        s = str(v).strip()
+        if s == "":
+            continue
+        try:
+            if pat.is_integer(pa_type):
+                out.append(int(float(s)))
+            elif pat.is_floating(pa_type):
+                out.append(float(s))
+            else:
+                out.append(s)
+        except Exception:
+            # skip values that can't be coerced
+            continue
+    return out
+
+
+# For taxonomy filters cascade
+def distinct_values_for_column(
+    column: str,
+    *,
+    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
+    taxonomy_filter: Optional[Sequence[str]] = None,   # legacy single-col (optional)
+    climate_filter: Optional[Sequence[str]] = None,
+    bio_levels_filter: Optional[Sequence[str]] = None,
+    bio_values_filter: Optional[Sequence[str]] = None,
+    limit: int = 5000,
+) -> list[str]:
+    """
+    Return sorted distinct values for `column` from dashboard_main parquet,
+    under the SAME predicate pushdown as the grid (type-aware).
+    """
+    main_path = config.DATA_DIR / config.DASHBOARD_MAIN_FN
+    dset = _dataset(main_path)
+
+    # biogeo → accession set (if any)
+    accession_filter = None
+    if bio_levels_filter or bio_values_filter:
+        accs = _get_accessions_for_biogeo(bio_levels_filter or [], bio_values_filter or [])
+        if not accs:
+            return []
+        accession_filter = list(accs)
+
+    expr = _build_filter_expr(
+        dset=dset,
+        taxonomy_filter=taxonomy_filter,
+        taxonomy_filter_map=taxonomy_filter_map,
+        climate_filter=climate_filter,
+        accession_filter=accession_filter,
+    )
+
+    # project one column + filter, then unique in pandas (fast enough for options)
+    table = dset.to_table(columns=[column], filter=expr)
+    ser = pd.Series(table.column(0).to_pandas())
+    vals = (
+        ser.dropna()
+           .astype(str)   # dropdowns use strings
+           .unique()
+           .tolist()
+    )
+    return sorted(vals)[:limit]

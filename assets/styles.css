@@ -46,11 +46,11 @@ a:hover { text-decoration: underline; }
   font-weight: 600;
 }
 
-.filters-row {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(200px, 1fr));
-  gap: 12px;
-}
+/*.filters-row {*/
+/*  display: grid;*/
+/*  grid-template-columns: repeat(3, minmax(200px, 1fr));*/
+/*  gap: 12px;*/
+/*}*/
 
 .control-label {
   display: block;
@@ -90,6 +90,60 @@ a:hover { text-decoration: underline; }
 /* Filters row: now 4 columns */
 .filters-row {
   display: grid;
-  grid-template-columns: repeat(4, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+  align-items: end;
+}
+
+.btn-reset {
+  padding: 6px 10px;
+  border: 1px solid #374151;
+  background: #1f2937;
+  color: #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.btn-reset:hover { background: #111827; }
+
+.filters-break {
+  grid-column: 1 / -1;  /* full width of the grid */
+  height: 8px;          /* small spacer; tweak as you like */
+}
+
+/* Collapsible “Columns & presets” */
+.collapsible {
+  border: 1px solid #1f2937;
+  border-radius: 10px;
+  background: #0b1220;
+  margin-bottom: 12px;
+}
+.collapsible-summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 8px 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
+}
+.collapsible[open] .collapsible-summary {
+  border-bottom: 1px solid #1f2937;
+}
+.badge {
+  font-weight: 500;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #1f2937;
+  color: #e5e7eb;
+}
+
+/* Keep the inner controls tidy */
+.db-controls {
+  display: flex;
   gap: 12px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  padding: 12px;
 }

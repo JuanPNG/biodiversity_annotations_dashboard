@@ -12,7 +12,10 @@ GBIF_OCCURRENCES_FN = "gbif_occurrences.parquet"  # not used yet in filters
 
 # === Tell the app your actual column names here ===
 ACCESSION_COL_MAIN = "accession"         # in dashboard_main
-TAXONOMY_COL = "species"
+TAXONOMY_COL = None
+TAXONOMY_RANK_COLUMNS = [
+    "kingdom", "phylum", "class", "order", "family", "genus", "species"
+]
 CLIMATE_LABEL_COL = "clim_bio1_mean"
 
 # Biogeographic region label column in biogeo_long (e.g. "biogeographic_region")

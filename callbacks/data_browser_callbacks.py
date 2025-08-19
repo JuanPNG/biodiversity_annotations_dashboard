@@ -109,7 +109,7 @@ def reset_page_on_change(_filters, _cols, current_page):
     prevent_initial_call=False,
 )
 def update_grid(global_filters, page_value, page_size, selected_columns):
-    taxonomy = (global_filters or {}).get("taxonomy") or []
+    taxonomy_map = (global_filters or {}).get("taxonomy_map") or {}
     climate  = (global_filters or {}).get("climate") or []
     levels   = (global_filters or {}).get("bio_levels") or []
     values   = (global_filters or {}).get("bio_values") or []
@@ -131,7 +131,7 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
             columns=display_cols,
             page_number=page,
             page_size=size,
-            taxonomy_filter=taxonomy,
+            taxonomy_filter_map=taxonomy_map,
             climate_filter=climate,
             bio_levels_filter=levels,
             bio_values_filter=values,
@@ -150,7 +150,7 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
     # Optional total count (comment out if you didn't add count_dashboard_rows)
     try:
         total = count_dashboard_rows(
-            taxonomy_filter=taxonomy,
+            taxonomy_filter_map=taxonomy_map,
             climate_filter=climate,
             bio_levels_filter=levels,
             bio_values_filter=values,
@@ -159,7 +159,18 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
         total = None
 
     status = f"Page {page} • size {size} • returned {nrows} rows • {len(df.columns)} columns"
+
     if total is not None:
         status += f" • total {total:,} rows"
 
     return _make_column_defs(df), df.to_dict(orient="records"), status
+
+
+@callback(
+    Output("db-columns-count", "children"),
+    Input("db-columns", "value"),
+    prevent_initial_call=False,
+)
+def _update_columns_count(values):
+    n = len(values or [])
+    return f"({n} selected)"
