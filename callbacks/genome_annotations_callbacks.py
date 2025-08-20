@@ -1,94 +1,144 @@
+# callbacks/genome_annotations_callbacks.py
 from __future__ import annotations
 
+from typing import List, Dict
+
 import pandas as pd
-import plotly.express as px
-from dash import Input, Output, callback, no_update
+import plotly.graph_objects as go
+from dash import Input, Output, State, callback, no_update, ctx
 
 from utils import config
-from utils.parquet_io import list_biotype_columns, summarize_biotypes
+from utils.parquet_io import summarize_biotypes_by_rank  # % from *_count (uses total_gene_biotypes if present)
 
+# ---------- Drill helpers ----------
+def _next_rank(current: str | None) -> str | None:
+    ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+    if not current or current not in ranks:
+        return None
+    i = ranks.index(current)
+    return ranks[i + 1] if i + 1 < len(ranks) else None
 
-# Populate biotype options from schema (strip prefix/suffix for labels)
+def _prev_rank(current: str | None) -> str | None:
+    ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+    if not current or current not in ranks:
+        return None
+    i = ranks.index(current)
+    return ranks[i - 1] if i - 1 >= 0 else None
+
+# ---------- Drill handler (click bar to go deeper; button to go up) ----------
 @callback(
-    Output("ga-biotypes", "options"),
-    Input("url", "pathname"),
-    prevent_initial_call=False,
+    Output("ga-drill", "data"),
+    Output("ga-rank", "value", allow_duplicate=True),
+    Input("ga-chart", "clickData"),   # only clicks trigger drill-down
+    Input("ga-up", "n_clicks"),       # only button triggers drill-up
+    State("ga-rank", "value"),        # read current rank; don't trigger on change
+    State("ga-drill", "data"),
+    prevent_initial_call=True,
 )
-def init_biotype_options(_):
-    cols = list_biotype_columns()
-    # Use pct list by default for option names; counts will share the same names
-    pref = config.GENE_BIOTYPE_PREFIX
-    pct_sfx = config.GENE_BIOTYPE_PCT_SUFFIX
-    options = []
-    for c in sorted(set(cols.get("pct", [])) | set(cols.get("count", []))):
-        name = c
-        if name.startswith(pref):
-            name = name[len(pref):]
-        # strip either suffix if present
-        if name.endswith(pct_sfx):
-            name = name[: -len(pct_sfx)]
-        if name.endswith(config.GENE_BIOTYPE_COUNT_SUFFIX):
-            name = name[: -len(config.GENE_BIOTYPE_COUNT_SUFFIX)]
-        options.append({"label": name, "value": name})
-    # dedupe while preserving order
-    seen = set()
-    deduped = [o for o in options if (o["value"] not in seen and not seen.add(o["value"]))]
-    return deduped
+def handle_drill(clickData, up_clicks, rank_value, store):
+    store = store or {"path": []}
+    path: List[Dict[str, str]] = list(store.get("path", []))
+    trig = ctx.triggered_id
+    ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+    default_rank = "kingdom" if "kingdom" in ranks else (ranks[0] if ranks else None)
+    cur_rank = rank_value or default_rank
 
+    # Click on a stacked bar -> drill down
+    if trig == "ga-chart" and clickData:
+        pt = clickData["points"][0]
+        group_val = pt.get("customdata") or pt.get("y") or pt.get("x")
+        if group_val is not None and cur_rank:
+            step = {"rank": cur_rank, "value": str(group_val)}
+            if not path or path[-1] != step:
+                path.append(step)
+            nxt = _next_rank(cur_rank)
+            return {"path": path}, (nxt if nxt else no_update)
 
+    # Up button -> go up one level
+    if trig == "ga-up":
+        if path:
+            path.pop()
+            prv = _prev_rank(cur_rank) or cur_rank
+            return {"path": path}, prv
+        return {"path": []}, no_update
+
+    return no_update, no_update
+
+# ---------- Chart ----------
 @callback(
     Output("ga-chart", "figure"),
     Output("ga-status", "children"),
-    Input("global-filters", "data"),     # taxonomy / climate / biogeo
-    Input("ga-metric", "value"),         # "pct" or "count"
-    Input("ga-biotypes", "value"),       # selected names (without prefix/suffix)
-    Input("ga-topn", "value"),           # top N when none selected
+    Output("ga-crumbs", "children"),
+    Input("global-filters", "data"),  # taxonomy_map + biogeo
+    Input("ga-rank", "value"),
+    Input("ga-drill", "data"),
     prevent_initial_call=False,
 )
-def update_biotype_chart(global_filters, metric, selected_biotypes, topn):
-    metric = metric or "pct"
-    sel = selected_biotypes or []
-    topn = int(topn or config.BIOTYPE_TOP_N_DEFAULT)
+def update_biotype_bar(global_filters, group_rank, drill_store):
+    # Fallback to kingdom if missing
+    ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+    if not group_rank:
+        group_rank = "kingdom" if "kingdom" in ranks else (ranks[0] if ranks else None)
 
-    # Map selected names back to column names
-    col_map = list_biotype_columns()
-    if metric == "pct":
-        all_cols = col_map.get("pct", [])
-        sfx = config.GENE_BIOTYPE_PCT_SUFFIX
-    else:
-        all_cols = col_map.get("count", [])
-        sfx = config.GENE_BIOTYPE_COUNT_SUFFIX
-    pref = config.GENE_BIOTYPE_PREFIX
+    taxonomy_map = (global_filters or {}).get("taxonomy_map") or {}
+    levels       = (global_filters or {}).get("bio_levels") or []
+    values       = (global_filters or {}).get("bio_values") or []
 
-    def to_col(name: str) -> str:
-        return f"{pref}{name}{sfx}"
+    # Apply drill path as additional taxonomy filters
+    drill = (drill_store or {}).get("path", [])
+    for step in drill:
+        r = step.get("rank"); v = step.get("value")
+        if r and v:
+            taxonomy_map = {**taxonomy_map}
+            taxonomy_map.setdefault(r, [])
+            if v not in taxonomy_map[r]:
+                taxonomy_map[r] = list(taxonomy_map[r]) + [v]
 
-    cols = [to_col(n) for n in sel] if sel else all_cols
-
+    # Summarize -> % per group from *_count (normalized by total_gene_biotypes if present)
     try:
-        df = summarize_biotypes(
-            metric=metric,
-            biotype_cols=cols,
-            taxonomy_filter=(global_filters or {}).get("taxonomy") or [],
-            climate_filter=(global_filters or {}).get("climate") or [],
-            bio_levels_filter=(global_filters or {}).get("bio_levels") or [],
-            bio_values_filter=(global_filters or {}).get("bio_values") or [],
+        df = summarize_biotypes_by_rank(
+            group_rank=group_rank,
+            biotype_cols=None,               # include all *_count biotypes
+            taxonomy_filter_map=taxonomy_map,
+            climate_filter=[],               # sliders later
+            bio_levels_filter=levels,
+            bio_values_filter=values,
         )
     except Exception as e:
-        return {"data": [], "layout": {"height": 520}}, f"Error summarizing biotypes: {e}"
+        return {"data": [], "layout": {"height": 560}}, f"Error: {e}", ""
 
     if df.empty:
-        return {"data": [], "layout": {"height": 520}}, "No data for current filters."
+        return {"data": [], "layout": {"height": 560}}, "No data for current selection.", "—"
 
-    # If none selected, take top-N
-    if not sel:
-        df = df.head(topn)
+    # Build 100% stacked horizontal bars (already in %)
+    pivot = df.pivot_table(index="group", columns="biotype", values="value", aggfunc="mean").fillna(0)
 
-    # Build bar chart
-    title = "Gene biotypes — mean % by subset" if metric == "pct" else "Gene biotypes — total counts by subset"
-    fig = px.bar(df, x="biotype", y="value", title=title)
-    fig.update_layout(height=520, margin=dict(l=40, r=20, t=60, b=60))
-    fig.update_xaxes(tickangle=45)
+    groups   = pivot.index.astype(str).tolist()
+    biotypes = pivot.columns.astype(str).tolist()
+    height = max(360, min(900, 40 * len(groups) + 120))
 
-    status = f"{len(df)} biotypes • metric={metric}"
-    return fig, status
+    fig = go.Figure()
+    for b in biotypes:
+        fig.add_bar(
+            x=pivot[b].values,
+            y=groups,
+            name=b,
+            orientation="h",
+            customdata=groups,  # reliable drill key
+            hovertemplate="%{customdata}<br>" + f"{b}: %{{x:.2f}}%<extra></extra>",
+        )
+
+    fig.update_layout(
+        barmode="stack",
+        height=height,
+        margin=dict(l=60, r=20, t=60, b=60),
+        title=f"Gene biotype composition across {group_rank.title()}",
+        legend_traceorder="normal",
+        clickmode="event+select",
+    )
+    fig.update_xaxes(range=[0, 100], title="Percentage", ticksuffix="%")
+    fig.update_yaxes(title=group_rank.title())
+
+    crumbs = " / ".join(f"{p['rank'].title()}: {p['value']}" for p in drill) or "—"
+    status = f"{len(groups)} {group_rank} • {len(biotypes)} biotypes"
+    return fig, status, f"Path: {crumbs}"

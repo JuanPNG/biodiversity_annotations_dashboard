@@ -16,15 +16,17 @@ TAXONOMY_COL = None
 TAXONOMY_RANK_COLUMNS = [
     "kingdom", "phylum", "class", "order", "family", "genus", "species"
 ]
-CLIMATE_LABEL_COL = "clim_bio1_mean"
 
-# Biogeographic region label column in biogeo_long (e.g. "biogeographic_region")
+# Climate label (TODO: Kopen classification)
+CLIMATE_LABEL_COL = "clim_bio1_mean" # Provisional
+
+# Biogeographic region label column in biogeo_long
 ACCESSION_COL_BIOGEO = "accession"       # in biogeo_long
 BIOGEO_LEVEL_COL = "level"
 BIOGEO_VALUE_COL = "value"
 BIOGEO_LEVELS_TO_EXPOSE = ["realm", "biome", "ecoregion"]
 
-# Supports exact names and simple prefix wildcards like 'gene_biotype_*'
+# Preset columns
 PRESET_COLUMN_GROUPS = {
     "genome": [
         "accession", "species", "total_gene_biotypes",
@@ -57,9 +59,10 @@ GENE_BIOTYPE_PCT_SUFFIX = "_percentage"
 
 # Columns to ignore when detecting biotypes
 GENE_BIOTYPE_EXCLUDE = {"total_gene_biotypes"}
-# Chart defaults
-BIOTYPE_TOP_N_DEFAULT = 15
 
 # Columns that contain URLs (rendered as clickable links in the grid)
 URL_COLUMNS = ["biodiversity_portal", "gtf_file", "ensembl_browser", "gbif"]
+
+# Total number of annotated genes per accession (used for normalization if present)
+TOTAL_GENES_COL = "total_gene_biotypes"
 

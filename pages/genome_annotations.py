@@ -1,8 +1,14 @@
+# pages/genome_annotations.py
 from __future__ import annotations
 import dash
 from dash import html, dcc
+from utils import config
 
 dash.register_page(__name__, path="/genome-annotations", name="Genome Annotations")
+
+_ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+rank_options = [{"label": r.title(), "value": r} for r in _ranks]
+DEFAULT_RANK = "kingdom" if "kingdom" in _ranks else (_ranks[0] if _ranks else None)
 
 layout = html.Main(
     [
@@ -11,14 +17,11 @@ layout = html.Main(
             [
                 html.Div(
                     [
-                        html.Label("Metric", className="control-label"),
+                        html.Label("Group by rank", className="control-label"),
                         dcc.Dropdown(
-                            id="ga-metric",
-                            options=[
-                                {"label": "Percentage (mean of *_percentage)", "value": "pct"},
-                                {"label": "Count (sum of *_count)", "value": "count"},
-                            ],
-                            value="pct",
+                            id="ga-rank",
+                            options=rank_options,     # static options from config
+                            value=DEFAULT_RANK,       # default to Kingdom
                             clearable=False,
                             style={"width": "100%"},
                         ),
@@ -27,35 +30,22 @@ layout = html.Main(
                 ),
                 html.Div(
                     [
-                        html.Label("Biotypes", className="control-label"),
-                        dcc.Dropdown(
-                            id="ga-biotypes",
-                            options=[],    # populated by callback (derived from schema)
-                            value=[],      # empty = auto top-N
-                            multi=True,
-                            placeholder="Select biotypes (or leave empty for Top N)",
-                            style={"width": "100%"},
-                        ),
+                        html.Button("⬆️ Up one level", id="ga-up", n_clicks=0, className="btn-reset"),
+                        html.Div(id="ga-crumbs", style={"opacity": 0.8, "marginTop": 6}),
                     ],
-                    className="db-control db-control--wide",
-                ),
-                html.Div(
-                    [
-                        html.Label("Top N (used when no biotypes selected)", className="control-label"),
-                        dcc.Slider(
-                            id="ga-topn",
-                            min=5, max=50, step=1, value=15,
-                            tooltip={"always_visible": False},
-                        ),
-                    ],
-                    style={"minWidth": 280},
                     className="db-control",
                 ),
             ],
             className="db-controls",
         ),
+
+        html.Div("Tip: click a bar segment to drill down; use the legend to show/hide biotypes.",
+                 style={"marginBottom": "6px", "opacity": 0.75}),
         html.Div(id="ga-status", style={"marginBottom": "8px", "opacity": 0.85}),
-        dcc.Graph(id="ga-chart", figure={"data": [], "layout": {"height": 520}}),
+        dcc.Graph(id="ga-chart", figure={"data": [], "layout": {"height": 560}}),
+
+        # Drill state
+        dcc.Store(id="ga-drill", data={"path": []}, storage_type="memory"),
     ],
     className="page-container",
 )
