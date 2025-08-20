@@ -118,7 +118,7 @@ def get_navbar() -> html.Header:
 
     return html.Header(
         [
-            html.Div("Genomes Dashboard", className="brand"),
+            html.Div("Exploring Genome Annotations in Ecological Context", className="brand"),
             html.Nav(links, className="nav-links"),
             filters,
         ],
