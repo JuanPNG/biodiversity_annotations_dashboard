@@ -37,7 +37,9 @@ layout = html.Main(
                 ),
                 html.Div(
                     [
-                        html.Button("⬆️ Up one level", id="ga-up", n_clicks=0, className="btn-reset"),
+                        html.Button("⬆️ Up one level", id="ga-up", n_clicks=0, className="btn-reset", style={"marginLeft": "8px"}),
+                        html.Button("⬇️ Down one level", id="ga-down", n_clicks=0, className="btn-reset", style={"marginLeft": "8px"}),
+                        html.Button("🔄 Reset chart", id="ga-reset", n_clicks=0, className="btn-reset", style={"marginLeft": "8px"}),
                         html.Div(id="ga-crumbs", style={"opacity": 0.8, "marginTop": 6}),
                     ],
                     className="db-control",
@@ -53,6 +55,8 @@ layout = html.Main(
 
         # Drill state
         dcc.Store(id="ga-drill", data={"path": []}, storage_type="memory"),
+        dcc.Store(id="ga-selected-group", data={}, storage_type="memory"),
+        dcc.Store(id="ga-current-groups", data=[], storage_type="memory"),
     ],
     className="page-container",
 )
