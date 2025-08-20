@@ -13,6 +13,13 @@ DEFAULT_RANK = "kingdom" if "kingdom" in _ranks else (_ranks[0] if _ranks else N
 layout = html.Main(
     [
         html.H2("Genome Annotations — Gene Biotypes"),
+        html.P(
+            "This bar chart enables you to explore how the proportion of annotated gene biotypes changes between and within taxonomic groups. "
+            "Use the filters above to explore the data and identify species of interest. Use the biogeography and climate filters to find species from similar environments. "
+            "Select the taxon rank you wish to explore from the dropdown list below. "
+            "Use the buttons to drill down and move up taxon ranks. "
+            "Optionally, click on the bar of the taxon you would like to explore to drill down."
+        ),
         html.Div(
             [
                 html.Div(
