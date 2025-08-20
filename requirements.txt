@@ -1,6 +1,6 @@
-pandas
-pyarrow
-python-dotenv
-plotly
-dash
-dash-ag-grid
+dash>=3
+dash-ag-grid>=32.2
+plotly>=5.20
+pandas>=2.2
+pyarrow>=15
+flask-caching>=2.3
