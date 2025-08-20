@@ -8,13 +8,22 @@ import pyarrow.parquet as pq
 
 
 GENE_BIOTYPE_KEYS: Sequence[str] = (
+    # 10 most relevant
     "protein_coding","lncRNA","rRNA","tRNA","miRNA",
     "pseudogene","processed_pseudogene","antisense","snRNA","snoRNA",
+    # Others
+    "IG_C_gene", "IG_D_gene", "IG_J_gene", "IG_V_gene",
+    "Mt_rRNA", "Mt_tRNA",
+    "TR_C_gene", "TR_J_gene", "TR_V_gene",
+    "Y_RNA", "misc_RNA",
+    "ribozyme", "scaRNA",
+    "transcribed_processed_pseudogene", "transcribed_unprocessed_pseudogene",
+    "unitary_pseudogene", "unprocessed_pseudogene", "vault_RNA"
 )
 CLIMATE_VARS: Sequence[str] = ("bio1","bio7","bio12","bio15")
 CLIMATE_STATS: Sequence[str] = ("mean","max","min")
 
-# PARQUET_PATH = '../data/integ_genome_features_20250812.parquet'
+# PARQUET_PATH = '../data/original/integ_genome_features_20250812.parquet'
 
 
 def _safe_col(table: pq.Table, name: str) -> List[Any]:
