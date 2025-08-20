@@ -8,7 +8,7 @@ app = Dash(
     __name__,
     use_pages=True,
     suppress_callback_exceptions=True,
-    title="Genomes Dashboard",
+    title="Exploring Genome Annotations in Ecological Context",
 )
 
 server = app.server
