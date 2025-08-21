@@ -205,82 +205,122 @@ def summarize_biotypes(
 
 def load_dashboard_page(
     *,
-    columns: Optional[Sequence[str]],
-    page_number: int,
+    columns: List[str],
+    page: int,
     page_size: int,
-    taxonomy_filter: Optional[Sequence[str]] = None,
     taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
-    climate_filter: Optional[Sequence[str]] = None,
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
-    region_filter: Optional[Sequence[str]] = None,  # legacy
-    batch_size: int = 8192,
+    climate_filter: Optional[Dict] = None,           # reserved for later
+    biotype_pct_filter: Optional[dict] = None,       # {"biotype": str, "min": float, "max": float}
 ) -> Tuple[pd.DataFrame, int]:
+    """
+    Return (page_df, total_rows_after_filters) for the Data Browser.
+
+    Notes
+    -----
+    - Applies taxonomy + biogeo via Arrow predicate pushdown.
+    - Applies optional biotype % row filter in-batch using pandas:
+        pct(col) = biotype_count / total_gene_biotypes * 100 (fallback: sum of *_count)
+    - Reads only requested `columns`, plus any extra columns needed to evaluate the pct filter/sort.
+    - Performs server-side sort (if provided) after all filters, then slices the requested page.
+    """
     main_path = config.DATA_DIR / config.DASHBOARD_MAIN_FN
     dset = _dataset(main_path)
 
-    all_cols = list_columns(main_path)
-    use_cols = list(columns) if columns else pick_default_columns(all_cols, max_cols=25)
-
-    # Resolve biogeo -> accession set
-    levels = list(bio_levels_filter) if bio_levels_filter else []
-    values = list(bio_values_filter) if bio_values_filter else []
-    if region_filter and not values:
-        values = list(region_filter)
-
+    # Resolve accession filter from biogeo
     accession_filter = None
-    if levels or values:
-        accs = _get_accessions_for_biogeo(levels, values)
+    if bio_levels_filter or bio_values_filter:
+        accs = _get_accessions_for_biogeo(bio_levels_filter or [], bio_values_filter or [])
         if not accs:
-            return pd.DataFrame(columns=use_cols), 0
+            return pd.DataFrame(columns=columns), 0
         accession_filter = list(accs)
 
+    # Build predicate for pushdown (taxonomy + accession + (climate later))
     expr = _build_filter_expr(
         dset=dset,
-        taxonomy_filter=taxonomy_filter,
-        climate_filter=climate_filter,
-        accession_filter=accession_filter,
+        taxonomy_filter=None,
         taxonomy_filter_map=taxonomy_filter_map,
+        climate_filter=None,  # sliders later
+        accession_filter=accession_filter,
     )
 
-    # Page window
-    page = max(1, int(page_number or 1))
-    size = max(1, int(page_size or 50))
-    offset = (page - 1) * size
-    remaining = size
+    # Build the read column set
+    read_cols: set[str] = set(columns)
 
-    taken: list[pd.DataFrame] = []
-    skipped = 0
+    # If biotype % filter is active, ensure we can compute it
+    target_cnt_col = None
+    total_col = config.TOTAL_GENES_COL if (config.TOTAL_GENES_COL in dset.schema.names) else None
+    if biotype_pct_filter and biotype_pct_filter.get("biotype"):
+        sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
+        pref = config.GENE_BIOTYPE_PREFIX or ""
+        candidate = f"{pref}{biotype_pct_filter['biotype']}{sfx}"
+        if candidate in dset.schema.names:
+            target_cnt_col = candidate
+            read_cols.add(candidate)
+        if total_col:
+            read_cols.add(total_col)
+        else:
+            # Fallback: we need all *_count columns to compute per-row total
+            col_map = list_biotype_columns()
+            for c in col_map.get("count", []):
+                if c in dset.schema.names:
+                    read_cols.add(c)
 
-    scanner = ds.Scanner.from_dataset(dset, columns=use_cols, filter=expr, batch_size=batch_size)
+    # Scanner
+    scanner = ds.Scanner.from_dataset(
+        dset,
+        columns=list(read_cols),
+        filter=expr,
+        batch_size=8192,
+    )
 
+    # Collect filtered rows
+    frames: List[pd.DataFrame] = []
     for rb in scanner.to_batches():
-        n = rb.num_rows
-        if n == 0:
+        if rb.num_rows == 0:
             continue
-        if skipped + n <= offset:
-            skipped += n
-            continue
+        pdf = rb.to_pandas(types_mapper=pd.ArrowDtype)
 
-        start_in_batch = max(0, offset - skipped)
-        available = n - start_in_batch
-        take_now = min(remaining, available)
-        if take_now <= 0:
-            break
+        # Apply biotype % mask if needed
+        if target_cnt_col:
+            numer = pd.to_numeric(pdf[target_cnt_col], errors="coerce").astype(float)
+            if total_col and total_col in pdf.columns:
+                denom = pd.to_numeric(pdf[total_col], errors="coerce").astype(float)
+            else:
+                # sum of all *_count columns present in this batch
+                col_map = list_biotype_columns()
+                cnt_cols = [c for c in col_map.get("count", []) if c in pdf.columns]
+                denom = pd.DataFrame({c: pd.to_numeric(pdf[c], errors="coerce") for c in cnt_cols}).sum(axis=1).astype(float)
 
-        slice_rb = rb.slice(start_in_batch, take_now)
-        taken.append(slice_rb.to_pandas(types_mapper=pd.ArrowDtype))
+            valid = denom > 0
+            pct = pd.Series(np.nan, index=pdf.index, dtype="float64")
+            pct.loc[valid] = (numer.loc[valid] / denom.loc[valid]) * 100.0
 
-        remaining -= take_now
-        skipped += n
-        if remaining <= 0:
-            break
+            pmin = float(biotype_pct_filter.get("min", 0.0))
+            pmax = float(biotype_pct_filter.get("max", 100.0))
+            mask = pct.ge(pmin) & pct.le(pmax)
+            mask = mask.fillna(False)
+            pdf = pdf[mask]
+            if pdf.empty:
+                continue
 
-    if taken:
-        df = pd.concat(taken, ignore_index=True)
-    else:
-        df = pd.DataFrame(columns=use_cols)
-    return df, len(df)
+        # Keep only requested display columns in the same order
+        frames.append(pdf[list(columns)])
+
+    if not frames:
+        return pd.DataFrame(columns=columns), 0
+
+    all_rows = pd.concat(frames, ignore_index=True)
+
+    # Page slice
+    start = max(0, (max(1, int(page)) - 1) * int(page_size))
+    end = start + int(page_size)
+    page_df = all_rows.iloc[start:end].reset_index(drop=True)
+
+    return page_df, int(len(page_df))
+
+
 
 def count_dashboard_rows(
     *,
@@ -289,25 +329,18 @@ def count_dashboard_rows(
     climate_filter: Optional[Sequence[str]] = None,
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
-    region_filter: Optional[Sequence[str]] = None,  # legacy
-    batch_size: int = 131072,
+    biotype_pct_filter: Optional[dict] = None,     # {"biotype": str, "min": float, "max": float}
 ) -> int:
     """
-    Return the total number of rows in dashboard_main that match the filters.
-    Tries Dataset.count_rows(filter=...), and falls back to a light batch scan.
+        Count rows after applying taxonomy + biogeo pushdown and optional biotype-% row filter.
     """
     main_path = config.DATA_DIR / config.DASHBOARD_MAIN_FN
     dset = _dataset(main_path)
 
-    # Resolve biogeo -> accession set
-    levels = list(bio_levels_filter) if bio_levels_filter else []
-    values = list(bio_values_filter) if bio_values_filter else []
-    if region_filter and not values:
-        values = list(region_filter)
-
+    # Resolve accession filter from biogeo
     accession_filter = None
-    if levels or values:
-        accs = _get_accessions_for_biogeo(levels, values)
+    if bio_levels_filter or bio_values_filter:
+        accs = _get_accessions_for_biogeo(bio_levels_filter or [], bio_values_filter or [])
         if not accs:
             return 0
         accession_filter = list(accs)
@@ -320,19 +353,64 @@ def count_dashboard_rows(
         taxonomy_filter_map=taxonomy_filter_map,
     )
 
-    # Fast path (available in recent pyarrow)
-    try:
-        return int(dset.count_rows(filter=expr))
-    except Exception:
-        pass
+    # Minimal column set
+    read_cols: set[str] = set()
+    target_cnt_col = None
+    total_col = config.TOTAL_GENES_COL if (config.TOTAL_GENES_COL in dset.schema.names) else None
+    if biotype_pct_filter and biotype_pct_filter.get("biotype"):
+        sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
+        pref = config.GENE_BIOTYPE_PREFIX or ""
+        candidate = f"{pref}{biotype_pct_filter['biotype']}{sfx}"
+        if candidate in dset.schema.names:
+            target_cnt_col = candidate
+            read_cols.add(candidate)
+        if total_col:
+            read_cols.add(total_col)
+        else:
+            col_map = list_biotype_columns()
+            for c in col_map.get("count", []):
+                if c in dset.schema.names:
+                    read_cols.add(c)
+    else:
+        # If no pct filter, read a single light column for counting
+        first_col = dset.schema.names[0]
+        read_cols.add(first_col)
 
-    # Fallback: scan a single lightweight column and sum batch sizes
-    cols = list_columns(main_path)
-    first_col = config.ACCESSION_COL_MAIN if config.ACCESSION_COL_MAIN in cols else cols[0]
+    scanner = ds.Scanner.from_dataset(
+        dset,
+        columns=list(read_cols),
+        filter=expr,
+        batch_size=8192,
+    )
+
     total = 0
-    scanner = ds.Scanner.from_dataset(dset, columns=[first_col], filter=expr, batch_size=batch_size)
     for rb in scanner.to_batches():
-        total += rb.num_rows
+        if rb.num_rows == 0:
+            continue
+        pdf = rb.to_pandas(types_mapper=pd.ArrowDtype)
+
+        if target_cnt_col:
+            numer = pd.to_numeric(pdf[target_cnt_col], errors="coerce").astype(float)
+            if total_col and total_col in pdf.columns:
+                denom = pd.to_numeric(pdf[total_col], errors="coerce").astype(float)
+            else:
+                col_map = list_biotype_columns()
+                cnt_cols = [c for c in col_map.get("count", []) if c in pdf.columns]
+                denom = pd.DataFrame({c: pd.to_numeric(pdf[c], errors="coerce") for c in cnt_cols}).sum(axis=1).astype(
+                    float)
+
+            valid = denom > 0
+            pct = pd.Series(np.nan, index=pdf.index, dtype="float64")
+            pct.loc[valid] = (numer.loc[valid] / denom.loc[valid]) * 100.0
+
+            pmin = float(biotype_pct_filter.get("min", 0.0))
+            pmax = float(biotype_pct_filter.get("max", 100.0))
+            mask = pct.ge(pmin) & pct.le(pmax)
+            mask = mask.fillna(False)
+            total += int(mask.sum())
+        else:
+            total += int(len(pdf))
+
     return total
 
 
