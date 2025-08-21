@@ -1,12 +1,13 @@
 # callbacks/global_filters.py  — add/replace with this consolidated version
 
 from __future__ import annotations
-from dash import Input, Output, callback, no_update
-
+from dash import Input, Output, callback, no_update, State
+from utils import config
+from utils.parquet_io import list_biotype_columns
 from utils.data_tools import (
     list_taxonomy_options,          # you already had this
     list_biogeo_levels, list_biogeo_values,
-    list_taxonomy_options_cascaded, # NEW
+    list_taxonomy_options_cascaded
 )
 
 # --- Init: populate options once on load (taxonomy full lists + biogeo) ---
@@ -175,3 +176,40 @@ def reset_taxonomy(_n):
     # Clear all taxonomy rank selections
     empty = []
     return empty, empty, empty, empty, empty, empty, empty, empty
+
+
+# A) populate the biotype dropdown with names (from *_count columns)
+@callback(
+    Output("bio-pct-biotype", "options"),
+    Input("url", "pathname"),
+    prevent_initial_call=False,
+)
+def init_biotype_pct_options(_):
+    col_map = list_biotype_columns()
+    cnt = sorted(set(col_map.get("count", [])))
+    sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
+    names = [(c[:-len(sfx)] if c.endswith(sfx) else c) for c in cnt]
+    # de-dupe preserving order
+    seen = set()
+    return [{"label": n, "value": n} for n in names if (n not in seen and not seen.add(n))]
+
+# B) merge the biotype-% selection into the global-filters store
+@callback(
+    Output("global-filters", "data", allow_duplicate=True),
+    Input("bio-pct-biotype", "value"),
+    Input("bio-pct-range", "value"),
+    State("global-filters", "data"),
+    prevent_initial_call=True,
+)
+def set_biotype_pct_in_store(biotype_name, pct_range, store):
+    store = store or {}
+    gf = dict(store)
+    # If filter is effectively "off", remove it
+    if not biotype_name or not pct_range or pct_range == [0, 100]:
+        if "biotype_pct" in gf:
+            gf.pop("biotype_pct", None)
+        return gf
+
+    # Persist selection as a small dict
+    gf["biotype_pct"] = {"biotype": str(biotype_name), "min": float(pct_range[0]), "max": float(pct_range[1])}
+    return gf
