@@ -522,3 +522,68 @@ def summarize_biotypes_by_rank(
     df["group"] = df["group"].astype(str)
     # Keep deterministic order
     return df.sort_values(["group", "biotype"]).reset_index(drop=True)
+
+
+def summarize_biotype_totals(
+    *,
+    biotype_cols: list[str] | None = None,          # *_count columns or None → auto-detect
+    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
+    taxonomy_filter: Optional[Sequence[str]] = None,   # legacy
+    climate_filter: Optional[Sequence[str]] = None,
+    bio_levels_filter: Optional[Sequence[str]] = None,
+    bio_values_filter: Optional[Sequence[str]] = None,
+    batch_size: int = 8192,
+) -> pd.DataFrame:
+    """
+    Sum *_count columns across ALL matching rows (no grouping).
+    Returns: DataFrame ['biotype','count'] sorted by descending count.
+    """
+    main_path = config.DATA_DIR / config.DASHBOARD_MAIN_FN
+    dset = _dataset(main_path)
+
+    # Resolve accession filter from biogeo
+    accession_filter = None
+    if bio_levels_filter or bio_values_filter:
+        accs = _get_accessions_for_biogeo(bio_levels_filter or [], bio_values_filter or [])
+        if not accs:
+            return pd.DataFrame(columns=["biotype", "count"])
+        accession_filter = list(accs)
+
+    # Predicate (type-aware)
+    expr = _build_filter_expr(
+        dset=dset,
+        taxonomy_filter=taxonomy_filter,
+        taxonomy_filter_map=taxonomy_filter_map,
+        climate_filter=climate_filter,
+        accession_filter=accession_filter,
+    )
+
+    # Which *_count columns
+    if not biotype_cols:
+        col_map = list_biotype_columns()
+        cols = list(col_map.get("count", []))
+    else:
+        cols = list(biotype_cols)
+    if not cols:
+        return pd.DataFrame(columns=["biotype", "count"])
+
+    # Scan and sum
+    sums: Dict[str, float] = {c: 0.0 for c in cols}
+    scanner = ds.Scanner.from_dataset(dset, columns=cols, filter=expr, batch_size=batch_size)
+    for rb in scanner.to_batches():
+        if rb.num_rows == 0:
+            continue
+        pdf = rb.to_pandas(types_mapper=pd.ArrowDtype)
+        for c in cols:
+            s = pd.to_numeric(pdf[c], errors="coerce").fillna(0)
+            sums[c] += float(s.sum())
+
+    # Build result (strip suffix)
+    cnt_sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
+    rows = []
+    for c, v in sums.items():
+        name = c[:-len(cnt_sfx)] if c.endswith(cnt_sfx) else c
+        rows.append({"biotype": name, "count": float(v)})
+
+    df = pd.DataFrame(rows).sort_values("count", ascending=False).reset_index(drop=True)
+    return df
