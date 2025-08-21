@@ -8,7 +8,7 @@ import plotly.graph_objects as go
 from dash import Input, Output, State, callback, no_update, ctx
 
 from utils import config
-from utils.parquet_io import summarize_biotypes_by_rank  # % from *_count (uses total_gene_biotypes if present)
+from utils.parquet_io import summarize_biotypes_by_rank, summarize_biotype_totals
 
 # ---------- Drill helpers ----------
 def _next_rank(current: str | None) -> str | None:
@@ -149,11 +149,28 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
     pivot = df.pivot_table(index="group", columns="biotype", values="value", aggfunc="mean").fillna(0)
 
     groups   = pivot.index.astype(str).tolist()
-    biotypes = pivot.columns.astype(str).tolist()
+    biotypes_all = pivot.columns.astype(str).tolist()
+
+    try:
+        totals = summarize_biotype_totals(
+            taxonomy_filter_map=taxonomy_map,
+            climate_filter=[],  # none yet
+            bio_levels_filter=levels,
+            bio_values_filter=values,
+        )
+        ordered = [b for b in totals["biotype"].tolist() if b in biotypes_all]
+        # keep any rare biotypes (not in totals due to zeros) at the end, alphabetically
+        tail = sorted([b for b in biotypes_all if b not in set(ordered)])
+        biotypes_order = ordered + tail
+    except Exception:
+        # fallback: alphabetical
+        biotypes_order = sorted(biotypes_all)
+
+    # Dynamic height
     height = max(360, min(900, 40 * len(groups) + 120))
 
     fig = go.Figure()
-    for b in biotypes:
+    for b in biotypes_order:
         fig.add_bar(
             x=pivot[b].values,
             y=groups,
@@ -175,7 +192,7 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
     fig.update_yaxes(title=group_rank.title())
 
     crumbs = " / ".join(f"{p['rank'].title()}: {p['value']}" for p in drill) or "—"
-    status = f"{len(groups)} {group_rank} • {len(biotypes)} biotypes"
+    status = f"{len(groups)} {group_rank} • {len(biotypes_all)} biotypes"
     return fig, status, f"Path: {crumbs}", groups
 
 
