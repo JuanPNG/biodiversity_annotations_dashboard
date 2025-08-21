@@ -11,7 +11,11 @@ def get_navbar() -> html.Header:
     # --- TAXONOMY (same IDs as before) ---
     taxonomy_group = html.Details(
         [
-            html.Summary("🧬 Taxonomy filters", className="filter-summary"),
+            html.Summary(
+                ["🧬 Taxonomy filters ",
+                 html.Span("0", id="tax-summary-badge", className="badge")],
+                className="filter-summary",
+            ),
             html.Div(
                 [
                     html.Div(
@@ -69,7 +73,11 @@ def get_navbar() -> html.Header:
     # --- ENVIRONMENT (biogeo + climate) (same IDs as before) ---
     environment_group = html.Details(
         [
-            html.Summary("🌍 Environment (biogeography + climate)", className="filter-summary"),
+            html.Summary(
+                ["🌍 Environment (biogeography + climate) ",
+                 html.Span("0", id="env-summary-badge", className="badge")],
+                className="filter-summary",
+            ),
             html.Div(
                 [
                     html.Div(
@@ -99,7 +107,11 @@ def get_navbar() -> html.Header:
     # --- BIOTYPE % (same IDs as before) ---
     biotype_group = html.Details(
         [
-            html.Summary("🧪 Gene biotype filters", className="filter-summary"),
+            html.Summary(
+                ["🧪 Gene biotype filters ",
+                 html.Span("0", id="bio-summary-badge", className="badge")],
+                className="filter-summary",
+            ),
             html.Div(
                 [
                     html.Div(
