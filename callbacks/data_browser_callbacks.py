@@ -113,6 +113,7 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
     climate  = (global_filters or {}).get("climate") or []
     levels   = (global_filters or {}).get("bio_levels") or []
     values   = (global_filters or {}).get("bio_values") or []
+    bio_pct = (global_filters or {}).get("biotype_pct") or None
     page = int(page_value or 1)
     size = int(page_size or 50)
 
@@ -127,14 +128,15 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
     display_cols = [c for c in use_cols if c not in url_set] + [c for c in use_cols if c in url_set]
 
     try:
-        df, nrows = load_dashboard_page(
+        df, returned_rows = load_dashboard_page(
             columns=display_cols,
-            page_number=page,
+            page=page,
             page_size=size,
             taxonomy_filter_map=taxonomy_map,
             climate_filter=climate,
             bio_levels_filter=levels,
             bio_values_filter=values,
+            biotype_pct_filter=bio_pct,
         )
     except Exception as e:
         return no_update, no_update, f"Error loading data: {e}"
@@ -147,21 +149,24 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
     # Reindex to the enforced order (just in case Arrow changed it)
     df = df[[c for c in display_cols if c in df.columns]]
 
-    # Optional total count (comment out if you didn't add count_dashboard_rows)
+    # Optional total count
     try:
         total = count_dashboard_rows(
             taxonomy_filter_map=taxonomy_map,
             climate_filter=climate,
             bio_levels_filter=levels,
             bio_values_filter=values,
+            biotype_pct_filter=bio_pct,
         )
     except Exception:
         total = None
 
-    status = f"Page {page} • size {size} • returned {nrows} rows • {len(df.columns)} columns"
+    status = f"Page {page} • size {size} • returned {returned_rows} rows • {len(df.columns)} columns"
 
     if total is not None:
         status += f" • total {total:,} rows"
+    if bio_pct:
+        status += f" • biotype%: {bio_pct['biotype']} {bio_pct['min']:.1f}–{bio_pct['max']:.1f}%"
 
     return _make_column_defs(df), df.to_dict(orient="records"), status
 
