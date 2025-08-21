@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 import pyarrow.types as pat
@@ -419,6 +420,7 @@ def summarize_biotypes_by_rank(
     climate_filter: Optional[Sequence[str]] = None,
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
+    biotype_pct_filter: Optional[dict] = None,
     batch_size: int = 8192,
 ) -> pd.DataFrame:
     """
@@ -465,10 +467,28 @@ def summarize_biotypes_by_rank(
     if config.TOTAL_GENES_COL and config.TOTAL_GENES_COL in dset.schema.names:
         total_col = config.TOTAL_GENES_COL
 
-    read_cols = [group_rank] + cols + ([total_col] if total_col else [])
+    # ---- biotype-% row filter setup (optional) ----
+    pct_use = None
+    pct_min = pct_max = None
+    extra_filter_col = None
+    if biotype_pct_filter and biotype_pct_filter.get("biotype"):
+        sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
+        pref = config.GENE_BIOTYPE_PREFIX or ""
+        target = f"{pref}{biotype_pct_filter['biotype']}{sfx}"
+        if target in dset.schema.names:
+            pct_use = target
+            pct_min = float(biotype_pct_filter.get("min", 0.0))
+            pct_max = float(biotype_pct_filter.get("max", 100.0))
+            # ensure we read the target count column even if not in 'cols'
+            if target not in cols:
+                extra_filter_col = target
+
+    # Columns to read
+    read_cols = [group_rank] + cols
+    if total_col: read_cols.append(total_col)
+    if extra_filter_col: read_cols.append(extra_filter_col)
 
     # Accumulators
-    # (group, col) -> sum; group -> total genes (if available)
     sums: Dict[Tuple[str, str], float] = {}
     group_totals: Dict[str, float] = {}
 
@@ -477,10 +497,35 @@ def summarize_biotypes_by_rank(
         if rb.num_rows == 0:
             continue
         pdf = rb.to_pandas(types_mapper=pd.ArrowDtype)
+
+        # ---- apply biotype-% row filter if requested ----
+        if pct_use:
+            # Choose denominator: total_gene_biotypes if present; else sum of *_count columns in this batch row
+            if total_col and total_col in pdf.columns:
+                denom = pd.to_numeric(pdf[total_col], errors="coerce").astype(float)
+            else:
+                denom = pd.DataFrame({c: pd.to_numeric(pdf.get(c), errors="coerce") for c in cols}).sum(axis=1).astype(
+                    float)
+
+            numer = pd.to_numeric(pdf[pct_use], errors="coerce").astype(float)
+
+            # Robust percentage: only divide where denom > 0; leave NaN otherwise (no inf)
+            valid = denom > 0
+            pct = pd.Series(np.nan, index=pdf.index, dtype="float64")
+            pct.loc[valid] = (numer.loc[valid] / denom.loc[valid]) * 100.0
+
+            # Range mask; NaNs become False
+            mask = pct.ge(pct_min) & pct.le(pct_max)
+            mask = mask.fillna(False)
+
+            pdf = pdf[mask]
+            if pdf.empty:
+                continue
+
         g = pdf[group_rank].astype(str).fillna("NA")
 
         # total genes per group (if column present)
-        if total_col:
+        if total_col and total_col in pdf.columns:
             t = pd.to_numeric(pdf[total_col], errors="coerce").fillna(0)
             t_sum = t.groupby(g).sum()
             for grp, val in t_sum.items():
