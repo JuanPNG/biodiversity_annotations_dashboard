@@ -112,6 +112,32 @@ def get_navbar() -> html.Header:
                 ],
                 className="filter-col",
             ),
+            html.Div(
+                [
+                    html.Label("Biotype % filter", className="control-label"),
+                    dcc.Dropdown(
+                        id="bio-pct-biotype",
+                        options=[],  # populated by callback
+                        value=None,
+                        placeholder="Choose a biotype",
+                        clearable=True,
+                        style={"width": "100%"},
+                    ),
+                    html.Div(
+                        [
+                            html.Small("Range (%)", style={"opacity": 0.8, "marginRight": 8}),
+                            dcc.RangeSlider(
+                                id="bio-pct-range",
+                                min=0, max=100, step=0.5, value=[0, 100],
+                                tooltip={"always_visible": False},
+                                allowCross=False,
+                            ),
+                        ],
+                        style={"marginTop": 6}
+                    ),
+                ],
+                className="db-control db-control--narrow",
+            ),
         ],
         className="filters-row",
     )
