@@ -99,6 +99,22 @@ def _build_filter_expr(
 
     return expr
 
+def _build_biotype_pct_pushdown(dset: ds.Dataset, biotype_pct_filter: Optional[dict]) -> tuple[Optional[ds.Expression], Optional[str]]:
+    """
+    If the chosen biotype has a precomputed *_percentage column, return (expr, column_name)
+    where expr is: pct_col BETWEEN [min, max]. Otherwise (None, None).
+    """
+    if not biotype_pct_filter or not biotype_pct_filter.get("biotype"):
+        return None, None
+    pct_sfx = config.GENE_BIOTYPE_PCT_SUFFIX or "_percentage"
+    pref = config.GENE_BIOTYPE_PREFIX or ""
+    col = f"{pref}{biotype_pct_filter['biotype']}{pct_sfx}"
+    if col in dset.schema.names:
+        pmin = float(biotype_pct_filter.get("min", 0.0))
+        pmax = float(biotype_pct_filter.get("max", 100.0))
+        expr = (ds.field(col) >= pmin) & (ds.field(col) <= pmax)
+        return expr, col
+    return None, None
 
 
 def list_biotype_columns() -> dict[str, list[str]]:
@@ -245,10 +261,16 @@ def load_dashboard_page(
         accession_filter=accession_filter,
     )
 
+    pct_expr, pct_col = _build_biotype_pct_pushdown(dset, biotype_pct_filter)
+    if pct_expr is not None:
+        expr = pct_expr if expr is None else (expr & pct_expr)
+
     # Build the read column set
     read_cols: set[str] = set(columns)
+    if pct_col:
+        read_cols.add(pct_col)
 
-    # If biotype % filter is active, ensure we can compute it
+    # --- FALLBACK: if no % col, compute from counts in-batch ---
     target_cnt_col = None
     total_col = config.TOTAL_GENES_COL if (config.TOTAL_GENES_COL in dset.schema.names) else None
     if biotype_pct_filter and biotype_pct_filter.get("biotype"):
@@ -352,6 +374,20 @@ def count_dashboard_rows(
         accession_filter=accession_filter,
         taxonomy_filter_map=taxonomy_filter_map,
     )
+
+    # --- try percentage pushdown first ---
+    pct_expr, pct_col = _build_biotype_pct_pushdown(dset, biotype_pct_filter)
+    if pct_expr is not None:
+        expr = pct_expr if expr is None else (expr & pct_expr)
+
+    # If pushdown exists, counting is trivial
+    if pct_expr is not None:
+        first_col = dset.schema.names[0]
+        scanner = ds.Scanner.from_dataset(dset, columns=[first_col], filter=expr, batch_size=8192)
+        total = 0
+        for rb in scanner.to_batches():
+            total += int(rb.num_rows)
+        return total
 
     # Minimal column set
     read_cols: set[str] = set()
@@ -530,6 +566,10 @@ def summarize_biotypes_by_rank(
         climate_filter=climate_filter,
         accession_filter=accession_filter,
     )
+    #  --- NEW: try to push down the % filter before scanning ---
+    pct_expr, _ = _build_biotype_pct_pushdown(dset, biotype_pct_filter)
+    if pct_expr is not None:
+        expr = pct_expr if expr is None else (expr & pct_expr)
 
     # Determine which *_count columns to read
     if not biotype_cols:
@@ -549,7 +589,7 @@ def summarize_biotypes_by_rank(
     pct_use = None
     pct_min = pct_max = None
     extra_filter_col = None
-    if biotype_pct_filter and biotype_pct_filter.get("biotype"):
+    if biotype_pct_filter and biotype_pct_filter.get("biotype") and pct_expr is None:
         sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
         pref = config.GENE_BIOTYPE_PREFIX or ""
         target = f"{pref}{biotype_pct_filter['biotype']}{sfx}"
