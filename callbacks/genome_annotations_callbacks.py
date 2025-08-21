@@ -118,6 +118,7 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
     taxonomy_map = (global_filters or {}).get("taxonomy_map") or {}
     levels       = (global_filters or {}).get("bio_levels") or []
     values       = (global_filters or {}).get("bio_values") or []
+    bio_pct = (global_filters or {}).get("biotype_pct") or None
 
     # Apply drill path as additional taxonomy filters
     drill = (drill_store or {}).get("path", [])
@@ -138,6 +139,7 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
             climate_filter=[],               # sliders later
             bio_levels_filter=levels,
             bio_values_filter=values,
+            biotype_pct_filter=bio_pct,
         )
     except Exception as e:
         return {"data": [], "layout": {"height": 560}}, f"Error: {e}", ""
@@ -193,6 +195,8 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
 
     crumbs = " / ".join(f"{p['rank'].title()}: {p['value']}" for p in drill) or "—"
     status = f"{len(groups)} {group_rank} • {len(biotypes_all)} biotypes"
+    if bio_pct:
+        status += f" • filter: {bio_pct['biotype']} {bio_pct['min']:.1f}–{bio_pct['max']:.1f}%"
     return fig, status, f"Path: {crumbs}", groups
 
 
