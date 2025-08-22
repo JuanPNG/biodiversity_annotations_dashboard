@@ -70,7 +70,7 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
-    # --- ENVIRONMENT (biogeo + climate) (same IDs as before) ---
+    # --- ENVIRONMENT (biogeo + climate) ---
     environment_group = html.Details(
         [
             html.Summary(
@@ -96,6 +96,11 @@ def get_navbar() -> html.Header:
                          dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")],
                         className="filter-col",
                     ),
+                    # reset just the biogeography filters (levels & values)
+                    html.Div(
+                        html.Button("Reset biogeography", id="btn-reset-biogeo", n_clicks=0, className="btn-reset"),
+                        className="filter-col",
+                    ),
                 ],
                 className="filters-grid",
             ),
@@ -104,7 +109,7 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
-    # --- BIOTYPE % (same IDs as before) ---
+    # --- BIOTYPE % ---
     biotype_group = html.Details(
         [
             html.Summary(
@@ -131,6 +136,11 @@ def get_navbar() -> html.Header:
                              tooltip={"always_visible": False}, allowCross=False,
                          )],
                         className="filter-col filter-col--full",
+                    ),
+                    # reset the biotype % controls
+                    html.Div(
+                        html.Button("Reset biotype filter", id="btn-reset-biotype", n_clicks=0, className="btn-reset"),
+                        className="filter-col",
                     ),
                 ],
                 className="filters-grid",
