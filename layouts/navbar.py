@@ -12,7 +12,7 @@ def get_navbar() -> html.Header:
     taxonomy_group = html.Details(
         [
             html.Summary(
-                ["🧬 Taxonomy filters ",
+                ["🧬 Taxonomy",
                  html.Span("0", id="tax-summary-badge", className="badge")],
                 className="filter-summary",
             ),
@@ -66,15 +66,15 @@ def get_navbar() -> html.Header:
                 className="filters-grid",
             ),
         ],
-        open=True,   # open by default
+        open=False,
         className="filter-group",
     )
 
-    # --- ENVIRONMENT (biogeo + climate) ---
+    # --- ENVIRONMENT (biogeo + climate) (same IDs as before) ---
     environment_group = html.Details(
         [
             html.Summary(
-                ["🌍 Environment (biogeography + climate) ",
+                ["🌍 Environment (biogeography + climate)",
                  html.Span("0", id="env-summary-badge", className="badge")],
                 className="filter-summary",
             ),
@@ -96,11 +96,6 @@ def get_navbar() -> html.Header:
                          dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")],
                         className="filter-col",
                     ),
-                    # reset just the biogeography filters (levels & values)
-                    html.Div(
-                        html.Button("Reset biogeography", id="btn-reset-biogeo", n_clicks=0, className="btn-reset"),
-                        className="filter-col",
-                    ),
                 ],
                 className="filters-grid",
             ),
@@ -109,11 +104,11 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
-    # --- BIOTYPE % ---
+    # --- BIOTYPE % (same IDs as before) ---
     biotype_group = html.Details(
         [
             html.Summary(
-                ["🧪 Gene biotype filters ",
+                ["🧪 Gene biotypes",
                  html.Span("0", id="bio-summary-badge", className="badge")],
                 className="filter-summary",
             ),
@@ -144,11 +139,6 @@ def get_navbar() -> html.Header:
                          )],
                         className="filter-col filter-col--full",
                     ),
-                    # reset the biotype % controls
-                    html.Div(
-                        html.Button("Reset biotype filter", id="btn-reset-biotype", n_clicks=0, className="btn-reset"),
-                        className="filter-col",
-                    ),
                 ],
                 className="filters-grid",
             ),
@@ -157,11 +147,26 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
+    # --- SUPER-GROUP: Data filters (wraps the three groups above) ---
+    data_filters_group = html.Details(
+        [
+            html.Summary(
+                ["🔎 Data filters",
+                 html.Span("0", id="all-summary-badge", className="badge")],
+                className="filter-summary",
+            ),
+            html.Div([taxonomy_group, environment_group, biotype_group], className="filters-row"),
+        ],
+        open=True,  # show open by default; user can collapse
+        className="filter-group",
+    )
+
     return html.Header(
         [
             html.Div("Exploring Genome Annotations in Ecological Context", className="brand"),
             html.Nav(links, className="nav-links"),
-            html.Div([taxonomy_group, environment_group, biotype_group], className="filters-row"),
+            # Wrap everything in a single tidy collapsible
+            data_filters_group,
         ],
         className="navbar",
     )
