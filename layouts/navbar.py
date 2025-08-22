@@ -132,8 +132,15 @@ def get_navbar() -> html.Header:
                         [html.Label("Range (%)", className="control-label"),
                          dcc.RangeSlider(
                              id="bio-pct-range",
-                             min=0, max=100, step=0.5, value=[0, 100],
-                             tooltip={"always_visible": False}, allowCross=False,
+                             min=0,
+                             max=100,
+                             value=[0, 100],
+                             step=1,
+                             marks={i: f"{i}%" for i in range(0, 101, 20)},
+                             dots=False,
+                             allowCross=False,
+                             tooltip={"always_visible": False, "placement": "bottom"},
+                             updatemode="mouseup",  # update only on release (keeps callbacks light)
                          )],
                         className="filter-col filter-col--full",
                     ),
