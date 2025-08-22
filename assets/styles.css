@@ -1,155 +1,231 @@
-/* =========================
-   Theme & Base
-   ========================= */
-:root{
-  --bg:#0f172a;          /* slate-900 */
-  --panel:#111827;       /* gray-900 */
-  --text:#e5e7eb;        /* gray-200 */
-  --muted:#9ca3af;       /* gray-400 */
-  --accent:#60a5fa;      /* blue-400 */
-  --border:#334155;      /* slate-700 */
+/* ================================
+   Global / Theme (Dark)
+=================================== */
+
+:root {
+  --bg: #0e1117;
+  --surface-1: #161a22;
+  --surface-2: #1f2130;
+  --surface-3: #25283a;
+  --text: #e6e7eb;
+  --text-dim: #b9bdc6;
+  --accent: #5bb0ff;
+  --accent-2: #9d79ff;
+  --ok: #2ecc71;
+  --warn: #ffcc66;
+  --danger: #ff667a;
+  --border: rgba(255,255,255,0.08);
+  --border-2: rgba(255,255,255,0.12);
+  --shadow: 0 4px 16px rgba(0,0,0,0.25);
 }
 
-*{ box-sizing:border-box; }
-
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,"Segoe UI",Roboto,Ubuntu,Cantarell,"Helvetica Neue",Arial,"Noto Sans","Apple Color Emoji","Segoe UI Emoji";
-  background:var(--bg);
-  color:var(--text);
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-a{ color:var(--accent); text-decoration:none; }
-a:hover{ text-decoration:underline; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
 
-.app-root{ min-height:100vh; }
-
-/* =========================
-   Top Bar / Nav
-   ========================= */
-.navbar{
-  position:sticky; top:0; z-index:10;
-  background:var(--panel);
-  border-bottom:1px solid #1f2937; /* gray-800 */
-  padding:12px 16px;
+hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 16px 0;
 }
 
-.brand{
-  font-weight:700; font-size:20px; margin-bottom:8px;
+/* Root container (from app.py) */
+.app-root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 12px 16px 24px;
 }
 
-.nav-links{
-  display:flex; gap:16px; margin-bottom:12px;
-}
-.nav-link{ font-weight:600; }
+/* ================================
+   Navbar + Links
+=================================== */
 
-/* =========================
-   Page Container
-   ========================= */
-.page-container{ padding:16px; }
-
-/* =========================
-   Controls (shared)
-   ========================= */
-.control-label{
-  display:block;
-  color:var(--muted);
-  font-size:12px;
-  margin-bottom:6px;
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: linear-gradient(180deg, var(--bg) 60%, rgba(14,17,23,0.7) 100%);
+  backdrop-filter: blur(4px);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
 }
 
-.btn-reset{
-  padding:6px 10px;
-  border:1px solid #374151;
-  background:#1f2937;
-  color:#e5e7eb;
-  border-radius:8px;
-  cursor:pointer;
-}
-.btn-reset:hover{ background:#111827; }
-
-.badge{
-  font-weight:500; font-size:12px; padding:2px 8px;
-  border-radius:999px;
-  background:#1f2937; color:#e5e7eb;
+.brand {
+  font-size: 1.05rem;
+  font-weight: 600;
+  opacity: 0.92;
+  margin-bottom: 8px;
 }
 
-/* Force a new row in grid contexts */
-.filters-break{ grid-column:1 / -1; height:8px; }
-
-/* =========================
-   “Columns & Presets” block
-   ========================= */
-.db-controls{
-  display:flex; gap:12px; align-items:flex-start;
-  flex-wrap:wrap; margin-bottom:12px; padding:0; /* one definition only */
+.nav-links {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
-.db-control{ display:flex; flex-direction:column; }
-.db-control .control-label{ margin-bottom:6px; color:var(--muted); font-size:12px; }
-.db-control--narrow{ flex:0 0 240px; }
-.db-control--wide{ flex:1 1 520px; min-width:360px; }
 
-/* =========================
+.nav-link {
+  color: var(--text);
+  opacity: 0.9;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+}
+.nav-link:hover { background: var(--surface-3); }
+
+/* ================================
    Collapsible Filter Groups
-   ========================= */
-/* Wrapper that holds the <details> groups */
-.filters-row{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
+=================================== */
+
+.filter-group {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-1);
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
 }
 
-/* Each group */
-.filter-group{
-  border:1px solid var(--border);
-  border-radius:10px;
-  background:rgba(255,255,255,0.04);
-  padding:0px 10px 10px;
-}
-.filter-group[open]{ box-shadow:0 1px 4px rgba(0,0,0,0.08); }
-
-/* Group header */
-.filter-summary{
-  cursor:pointer;
-  font-weight:600;
-  list-style:none;
-  margin:2px 0 8px;
-}
-.filter-summary::-webkit-details-marker{ display:none; }
-
-/* Inner layout of controls inside each group */
-.filters-grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-  gap:10px 12px;
-  align-items:end;
-}
-.filter-col{ display:flex; flex-direction:column; }
-.filter-col--full{ grid-column:1 / -1; } /* e.g., sliders span full width */
-
-/* Rotate caret on open */
-.filter-summary{
-  display:flex; align-items:center; gap:6px;
-}
-.filter-summary::before{
-  content:"▸";
-  display:inline-block;
-  transform:rotate(0deg);
-  transition:transform .15s ease-in-out;
-  opacity:.9;
-}
-.filter-group[open] > .filter-summary::before{
-  transform:rotate(90deg);
+.filter-summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  user-select: none;
 }
 
-/* Badge spacing in summaries */
-.filter-summary .badge{
-  margin-left:6px;
-  background:#1f2937;  /* dark chip */
-  border:1px solid #374151;
+.filter-group > summary::-webkit-details-marker { display: none; }
+
+.badge {
+  display: inline-block;
+  min-width: 18px;
+  padding: 2px 6px;
+  font-size: 12px;
+  line-height: 1;
+  color: #0e1117;
+  background: var(--warn);
+  border-radius: 10px;
+  margin-left: 6px;
 }
 
-/* Nav cards */
+/* Grid holding inner filter controls */
+.filters-row {
+  padding: 10px;
+}
+
+.filters-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  padding: 10px;
+}
+
+.filter-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.control-label {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+/* Reset buttons */
+.btn-reset {
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-2);
+  background: var(--surface-2);
+  color: var(--text);
+  cursor: pointer;
+}
+.btn-reset:hover {
+  background: var(--surface-3);
+  border-color: var(--border);
+}
+
+/* ================================
+   Page containers
+=================================== */
+
+.page-container {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: var(--shadow);
+}
+
+/* ================================
+   KPI Grid (Home)
+   - Horizontal flow, responsive
+   - Title (label) on top, number below
+=================================== */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+
+.kpi-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;   /* label above number */
+  justify-content: center;
+  align-items: center;
+  min-height: 86px;
+}
+
+.kpi-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  margin-bottom: 6px;       /* spacing above number */
+}
+
+.kpi-card h3 {
+  margin: 0;
+  font-size: 1.6rem;
+  line-height: 1.1;
+  letter-spacing: 0.2px;
+  color: var(--text);
+}
+
+.kpi-subtext {
+  font-size: 0.9rem;
+  color: var(--text-dim);
+  line-height: 1.35;
+  text-align: center;
+}
+
+/* Make the "Top gene biotypes" card span wider on medium+ screens */
+@media (min-width: 720px) {
+  .kpi-card--wide { grid-column: span 2; }
+}
+
+/* ================================
+   Home Navigation Cards
+=================================== */
+
 .nav-cards-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -162,15 +238,102 @@ a:hover{ text-decoration:underline; }
 .nav-card {
   padding: 14px 16px;
   border-radius: 14px;
-  background: var(--surface-2, #1f2130);
+  background: var(--surface-2);
   box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 4px 16px rgba(0,0,0,0.25);
   transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
-  border: 1px solid rgba(255,255,255,0.06);
-  min-height: 90px;
-  display: flex; flex-direction: column; justify-content: center;
+  border: 1px solid var(--border);
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
+
 .nav-card:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(0,0,0,0.32); }
-.nav-card .card-title { font-weight: 600; font-size: 1.05rem; margin-bottom: 2px; }
-.nav-card .card-sub { opacity: .78; font-size: .9rem; }
+.nav-card .card-title { font-weight: 600; font-size: 1.05rem; margin-bottom: 2px; color: var(--text); }
+.nav-card .card-sub { opacity: .78; font-size: .9rem; color: var(--text-dim); }
 
 .nav-card--disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ================================
+   AG Grid (optional minimal tweaks)
+=================================== */
+
+.ag-theme-alpine-dark, .ag-theme-alpine {
+  --ag-background-color: var(--surface-1);
+  --ag-foreground-color: var(--text);
+  --ag-border-color: var(--border);
+  --ag-row-hover-color: rgba(255,255,255,0.04);
+}
+
+/* ================================
+   Misc
+=================================== */
+
+.dash-graph, .js-plotly-plot {
+  background: var(--surface-1) !important;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+
+/* RangeSlider tweaks: ensure ticks don’t clutter */
+.rc-slider-mark-text {
+  color: var(--text-dim) !important;
+}
+.rc-slider-dot {
+  border-color: transparent !important; /* hide little dots per step */
+}
+
+/* ================================
+   Collapsible Carets + Hover/Focus
+   Works with nested <details> (e.g., Data filters → Taxonomy/Env/Biotype)
+=================================== */
+
+/* Hide the browser’s default marker */
+details > summary::-webkit-details-marker { display: none; }
+details > summary::marker { content: ""; }
+
+/* Summary row hit area + baseline look */
+details > summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background-color .15s ease, color .15s ease;
+}
+
+/* Subtle hover/focus to communicate clickability */
+details > summary:hover,
+details > summary:focus-visible {
+  background: var(--surface-2);
+  outline: 1px solid var(--border);
+}
+
+/* Custom caret before the text */
+details > summary::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 4px;
+  transform: rotate(0deg);            /* important: explicit baseline */
+  transform-origin: 50% 50%;
+  transition: transform .18s ease, color .18s ease;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+
+/* Rotate only the caret for THIS <details> (fixes nested rotation) */
+details[open] > summary::before {
+  transform: rotate(90deg);
+  color: var(--accent);
+}
+
+/* Optional: slightly brighten label on open */
+details[open] > summary {
+  color: var(--text);
+}
+
+/* If you use .filter-summary (existing class), keep its layout tidy */
+.filter-summary {
+  padding: 10px 12px;  /* consistent with summary rule above */
+}
