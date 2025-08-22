@@ -14,30 +14,44 @@ layout = html.Main(
         ),
 
         # KPIs — numbers only, filled by callbacks
-        html.Div(
-            [
-                html.Div([html.Div("Kingdoms", className="kpi-label"), html.H3(id="kpi-kingdom")], className="kpi-card"),
-                html.Div([html.Div("Phyla",    className="kpi-label"), html.H3(id="kpi-phylum")], className="kpi-card"),
-                html.Div([html.Div("Classes",  className="kpi-label"), html.H3(id="kpi-class")], className="kpi-card"),
-                html.Div([html.Div("Orders",   className="kpi-label"), html.H3(id="kpi-order")], className="kpi-card"),
-                html.Div([html.Div("Families", className="kpi-label"), html.H3(id="kpi-family")], className="kpi-card"),
-                html.Div([html.Div("Genera",   className="kpi-label"), html.H3(id="kpi-genus")], className="kpi-card"),
-                html.Div([html.Div("Species",  className="kpi-label"), html.H3(id="kpi-species")], className="kpi-card"),
+        dcc.Loading(
+            type="dot",
+            children=html.Div(
+                [
+                    html.Div([html.Div("Kingdoms", className="kpi-label"), html.H3(id="kpi-kingdom")],
+                             className="kpi-card"),
+                    html.Div([html.Div("Phyla", className="kpi-label"), html.H3(id="kpi-phylum")],
+                             className="kpi-card"),
+                    html.Div([html.Div("Classes", className="kpi-label"), html.H3(id="kpi-class")],
+                             className="kpi-card"),
+                    html.Div([html.Div("Orders", className="kpi-label"), html.H3(id="kpi-order")],
+                             className="kpi-card"),
+                    html.Div([html.Div("Families", className="kpi-label"), html.H3(id="kpi-family")],
+                             className="kpi-card"),
+                    html.Div([html.Div("Genera", className="kpi-label"), html.H3(id="kpi-genus")],
+                             className="kpi-card"),
+                    html.Div([html.Div("Species", className="kpi-label"), html.H3(id="kpi-species")],
+                             className="kpi-card"),
 
-                html.Div([html.Div("Realms",     className="kpi-label"), html.H3(id="kpi-bio-realm")], className="kpi-card"),
-                html.Div([html.Div("Biomes",     className="kpi-label"), html.H3(id="kpi-bio-biome")], className="kpi-card"),
-                html.Div([html.Div("Ecoregions", className="kpi-label"), html.H3(id="kpi-bio-ecoregion")], className="kpi-card"),
+                    html.Div([html.Div("Realms", className="kpi-label"), html.H3(id="kpi-bio-realm")],
+                             className="kpi-card"),
+                    html.Div([html.Div("Biomes", className="kpi-label"), html.H3(id="kpi-bio-biome")],
+                             className="kpi-card"),
+                    html.Div([html.Div("Ecoregions", className="kpi-label"), html.H3(id="kpi-bio-ecoregion")],
+                             className="kpi-card"),
 
-                html.Div([html.Div("Total annotated genes", className="kpi-label"), html.H3(id="kpi-total-genes")], className="kpi-card"),
-                html.Div(
-                    [
-                        html.Div("Top gene biotypes", className="kpi-label"),
-                        html.Div(id="kpi-top-biotypes", className="kpi-subtext"),
-                    ],
-                    className="kpi-card kpi-card--wide",
-                ),
-            ],
-            className="kpi-grid",
+                    html.Div([html.Div("Total annotated genes", className="kpi-label"), html.H3(id="kpi-total-genes")],
+                             className="kpi-card"),
+                    html.Div(
+                        [
+                            html.Div("Top gene biotypes", className="kpi-label"),
+                            html.Div(id="kpi-top-biotypes", className="kpi-subtext"),
+                        ],
+                        className="kpi-card kpi-card--wide",
+                    ),
+                ],
+                className="kpi-grid",
+            ),
         ),
 
         html.Hr(),

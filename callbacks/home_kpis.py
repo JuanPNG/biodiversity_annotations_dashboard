@@ -1,31 +1,50 @@
+# callbacks/home_kpis.py
 from __future__ import annotations
 
-from dash import Input, Output, callback
-from typing import List, Dict, Sequence, Set
+from typing import Dict, Sequence, Set
+
 import pandas as pd
 import pyarrow.dataset as ds
+from dash import Input, Output, callback
 
 from utils import config
 from utils.parquet_io import (
+    _dataset,                      # internal helpers — OK to use in callbacks
+    _build_filter_expr,
+    _build_biotype_pct_pushdown,
+    list_biotype_columns,
     distinct_values_for_column,
     summarize_biotype_totals,
-    _dataset,  # internal helpers are OK inside callbacks layer
-    _build_filter_expr, _build_biotype_pct_pushdown,
 )
 
-# ---- Small helper: get filtered accessions from dashboard_main under current filters ----
+# --------------------------- formatting helpers ---------------------------
+
+def _fmt_int(n) -> str:
+    """Format integers with thousands separators; fallback to str."""
+    try:
+        return f"{int(n):,}"
+    except Exception:
+        return str(n)
+
+
+# --------------------------- accession helper ---------------------------
+
 def _filtered_accessions(
     taxonomy_filter_map: Dict[str, Sequence[str]] | None,
     climate_filter: Sequence[str] | None,
     bio_levels_filter: Sequence[str] | None,
     bio_values_filter: Sequence[str] | None,
-    biotype_pct_filter: Dict | None,   # NEW
+    biotype_pct_filter: Dict | None,   # biotype% awareness
 ) -> Set[str]:
+    """
+    Return the set of accessions from dashboard_main that survive:
+    taxonomy + climate (+ biogeo via accession allow-list) + optional biotype% row filter.
+    """
     main = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
     if not main or not config.ACCESSION_COL_MAIN:
         return set()
 
-    # Start with taxonomy/climate; biogeo is added as accession filter next.
+    # Base predicate: taxonomy/climate; biogeo added below
     expr = _build_filter_expr(
         dset=main,
         taxonomy_filter=None,
@@ -57,7 +76,7 @@ def _filtered_accessions(
         tbl = main.to_table(columns=[config.ACCESSION_COL_MAIN], filter=expr)
         return set(pd.Series(tbl.column(0).to_pandas()).dropna().astype(str).unique().tolist())
 
-    # No pushdown → compute mask using counts/denominator; project accession + needed cols
+    # No pushdown → compute row mask from counts/denominator; project minimal columns
     read_cols: set[str] = {config.ACCESSION_COL_MAIN}
     target_cnt_col = None
     total_col = config.TOTAL_GENES_COL if (config.TOTAL_GENES_COL in main.schema.names) else None
@@ -75,18 +94,18 @@ def _filtered_accessions(
             if total_col:
                 read_cols.add(total_col)
             else:
-                from utils.parquet_io import list_biotype_columns
                 col_map = list_biotype_columns()
                 for c in col_map.get("count", []):
                     if c in main.schema.names:
                         read_cols.add(c)
 
+    # If still no target column, we can just project the accessions
     if not target_cnt_col:
         tbl = main.to_table(columns=[config.ACCESSION_COL_MAIN], filter=expr)
         return set(pd.Series(tbl.column(0).to_pandas()).dropna().astype(str).unique().tolist())
 
-    scanner = ds.Scanner.from_dataset(main, columns=list(read_cols), filter=expr, batch_size=8192)
     accs: Set[str] = set()
+    scanner = ds.Scanner.from_dataset(main, columns=list(read_cols), filter=expr, batch_size=8192)
     for rb in scanner.to_batches():
         if rb.num_rows == 0:
             continue
@@ -96,13 +115,12 @@ def _filtered_accessions(
         if total_col and total_col in pdf.columns:
             denom = pd.to_numeric(pdf[total_col], errors="coerce").astype(float)
         else:
-            from utils.parquet_io import list_biotype_columns
             col_map = list_biotype_columns()
             cnt_cols = [c for c in col_map.get("count", []) if c in pdf.columns]
             denom = pd.DataFrame({c: pd.to_numeric(pdf[c], errors="coerce") for c in cnt_cols}).sum(axis=1).astype(float)
 
         valid = denom > 0
-        pct = pd.Series(np.nan, index=pdf.index, dtype="float64")
+        pct = pd.Series(float("nan"), index=pdf.index, dtype="float64")
         pct.loc[valid] = (numer.loc[valid] / denom.loc[valid]) * 100.0
 
         mask = pct.ge(pmin).where(~pct.isna(), False) & pct.le(pmax).where(~pct.isna(), False)
@@ -111,6 +129,8 @@ def _filtered_accessions(
 
     return accs
 
+
+# --------------------------- KPIs callback ---------------------------
 
 @callback(
     Output("kpi-kingdom", "children"),
@@ -136,7 +156,7 @@ def update_home_kpis(gf):
     bio_vals = gf.get("bio_values") or []
     biopct   = gf.get("biotype_pct") or None
 
-    # --- Taxonomy distinct counts (respecting current filters) ---
+    # --- Taxonomy distinct counts (respecting ALL filters, incl. biotype%) ---
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
     tax_counts = []
     for col in ranks:
@@ -146,17 +166,16 @@ def update_home_kpis(gf):
             climate_filter=climate,
             bio_levels_filter=bio_lvls,
             bio_values_filter=bio_vals,
-            biotype_pct_filter=biopct,
+            biotype_pct_filter=biopct,  # biotype% aware
         )
         tax_counts.append(len(vals))
 
-    # --- Biogeography distinct counts, among filtered accessions ---
+    # --- Biogeography distinct counts among filtered accessions (biotype% aware) ---
     accs = _filtered_accessions(tax_map, climate, bio_lvls, bio_vals, biopct)
     realm_cnt = biome_cnt = ecoregion_cnt = 0
     if accs:
         bset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
         if bset:
-            # Build single pass per level to count unique values for just the filtered accessions
             def _count_for_level(level_name: str) -> int:
                 filt = (
                     ds.field(config.ACCESSION_COL_BIOGEO).isin(list(accs)) &
@@ -170,8 +189,7 @@ def update_home_kpis(gf):
             biome_cnt     = _count_for_level("biome")
             ecoregion_cnt = _count_for_level("ecoregion")
 
-    # --- Total annotated genes (if TOTAL_GENES_COL exists) ---
-    # --- Total annotated genes (if TOTAL_GENES_COL exists), honoring biotype% ---
+    # --- Total annotated genes (biotype% aware) ---
     total_genes = "-"
     main = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
     if main and config.TOTAL_GENES_COL in main.schema.names:
@@ -183,15 +201,14 @@ def update_home_kpis(gf):
             accession_filter=list(accs) if accs else None,
         )
 
-        # try pushdown first
         pct_expr, _pct_col = _build_biotype_pct_pushdown(main, biopct)
         if pct_expr is not None:
             expr = pct_expr if expr is None else (expr & pct_expr)
             tbl = main.to_table(columns=[config.TOTAL_GENES_COL], filter=expr)
             s = pd.to_numeric(pd.Series(tbl.column(0).to_pandas()), errors="coerce").fillna(0)
-            total_genes = f"{int(s.sum()):,}"
+            total_genes = _fmt_int(s.sum())
         else:
-            # compute row mask from counts/denominator then sum total_genes where mask True
+            # compute row mask then sum the total column for passing rows
             read_cols = {config.TOTAL_GENES_COL}
             target_cnt_col = None
             total_col = config.TOTAL_GENES_COL  # reuse as denominator if present
@@ -206,7 +223,6 @@ def update_home_kpis(gf):
                     pmax = float(biopct.get("max", 100.0))
                     read_cols.add(candidate)
                     if config.TOTAL_GENES_COL not in main.schema.names:
-                        from utils.parquet_io import list_biotype_columns
                         col_map = list_biotype_columns()
                         for c in col_map.get("count", []):
                             if c in main.schema.names:
@@ -224,14 +240,12 @@ def update_home_kpis(gf):
                     if config.TOTAL_GENES_COL in pdf.columns:
                         denom = pd.to_numeric(pdf[config.TOTAL_GENES_COL], errors="coerce").astype(float)
                     else:
-                        from utils.parquet_io import list_biotype_columns
                         col_map = list_biotype_columns()
                         cnt_cols = [c for c in col_map.get("count", []) if c in pdf.columns]
-                        denom = pd.DataFrame({c: pd.to_numeric(pdf[c], errors="coerce") for c in cnt_cols}).sum(
-                            axis=1).astype(float)
+                        denom = pd.DataFrame({c: pd.to_numeric(pdf[c], errors="coerce") for c in cnt_cols}).sum(axis=1).astype(float)
 
                     valid = denom > 0
-                    pct = pd.Series(np.nan, index=pdf.index, dtype="float64")
+                    pct = pd.Series(float("nan"), index=pdf.index, dtype="float64")
                     pct.loc[valid] = (numer.loc[valid] / denom.loc[valid]) * 100.0
                     mask = pct.ge(pmin).where(~pct.isna(), False) & pct.le(pmax).where(~pct.isna(), False)
 
@@ -239,28 +253,29 @@ def update_home_kpis(gf):
                 else:
                     total_sum += pd.to_numeric(pdf[config.TOTAL_GENES_COL], errors="coerce").fillna(0).sum()
 
-            total_genes = f"{int(total_sum):,}"
+            total_genes = _fmt_int(total_sum)
 
-    # --- Top biotypes by total count (respecting current filters) ---
-    # Re-use summarize_biotype_totals with same filters; show top 3
+    # --- Top biotypes by total count (already biotype% aware via summarize_biotype_totals) ---
     biotot = summarize_biotype_totals(
         taxonomy_filter_map=tax_map,
         climate_filter=climate,
         bio_levels_filter=bio_lvls,
         bio_values_filter=bio_vals,
-        biotype_pct_filter=biopct
+        biotype_pct_filter=biopct,
     )
     if isinstance(biotot, pd.DataFrame) and not biotot.empty:
         top = biotot.nlargest(3, "count")
-        desc = " • ".join([f"{r.biotype}: {int(r.count):,}" for r in top.itertuples()])
+        desc = " • ".join([f"{r.biotype}: {_fmt_int(r.count)}" for r in top.itertuples()])
     else:
         desc = "No biotypes under current filters"
 
-    # Map taxonomy counts into fixed 7 outputs (if ranks list is shorter, pad with zeros)
-    def _get(i): return str(tax_counts[i]) if i < len(tax_counts) else "0"
+    # Map taxonomy counts into fixed 7 outputs (pad with zeros if needed)
+    def _get(i):
+        return _fmt_int(tax_counts[i]) if i < len(tax_counts) else "0"
+
     return (
         _get(0), _get(1), _get(2), _get(3), _get(4), _get(5), _get(6),
-        str(realm_cnt), str(biome_cnt), str(ecoregion_cnt),
+        _fmt_int(realm_cnt), _fmt_int(biome_cnt), _fmt_int(ecoregion_cnt),
         total_genes,
         desc,
     )
