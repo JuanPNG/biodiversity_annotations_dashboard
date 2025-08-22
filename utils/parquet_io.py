@@ -488,11 +488,13 @@ def distinct_values_for_column(
     climate_filter: Optional[Sequence[str]] = None,
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
+    biotype_pct_filter: Optional[dict] = None,         # NEW
     limit: int = 5000,
 ) -> list[str]:
     """
     Return sorted distinct values for `column` from dashboard_main parquet,
-    under the SAME predicate pushdown as the grid (type-aware).
+    under the SAME predicate pushdown as the grid (type-aware),
+    and honoring an optional biotype-% row filter.
     """
     main_path = config.DATA_DIR / config.DASHBOARD_MAIN_FN
     dset = _dataset(main_path)
@@ -505,6 +507,7 @@ def distinct_values_for_column(
             return []
         accession_filter = list(accs)
 
+    # Base predicate (taxonomy + climate + accession)
     expr = _build_filter_expr(
         dset=dset,
         taxonomy_filter=taxonomy_filter,
@@ -513,16 +516,84 @@ def distinct_values_for_column(
         accession_filter=accession_filter,
     )
 
-    # project one column + filter, then unique in pandas (fast enough for options)
-    table = dset.to_table(columns=[column], filter=expr)
-    ser = pd.Series(table.column(0).to_pandas())
-    vals = (
-        ser.dropna()
-           .astype(str)   # dropdowns use strings
-           .unique()
-           .tolist()
+    # Try percentage pushdown first
+    pct_expr, _pct_col = _build_biotype_pct_pushdown(dset, biotype_pct_filter)
+    if pct_expr is not None:
+        expr = pct_expr if expr is None else (expr & pct_expr)
+        # Easy path: pushdown exists → project single column and unique
+        table = dset.to_table(columns=[column], filter=expr)
+        ser = pd.Series(table.column(0).to_pandas())
+        vals = (
+            ser.dropna()
+               .astype(str)
+               .unique()
+               .tolist()
+        )
+        return sorted(vals)[:limit]
+
+    # No pushdown: we may need to compute a row-mask from counts/denominator
+    # Read the rank column + whatever is needed to build the mask
+    read_cols: set[str] = {column}
+    target_cnt_col = None
+    total_col = config.TOTAL_GENES_COL if (config.TOTAL_GENES_COL in dset.schema.names) else None
+    pmin = pmax = None
+
+    if biotype_pct_filter and biotype_pct_filter.get("biotype"):
+        sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
+        pref = config.GENE_BIOTYPE_PREFIX or ""
+        candidate = f"{pref}{biotype_pct_filter['biotype']}{sfx}"
+        if candidate in dset.schema.names:
+            target_cnt_col = candidate
+            pmin = float(biotype_pct_filter.get("min", 0.0))
+            pmax = float(biotype_pct_filter.get("max", 100.0))
+            read_cols.add(candidate)
+            if total_col:
+                read_cols.add(total_col)
+            else:
+                # need all *_count columns to compute denom
+                col_map = list_biotype_columns()
+                for c in col_map.get("count", []):
+                    if c in dset.schema.names:
+                        read_cols.add(c)
+
+    # If no biotype filter active, we can just project the column
+    if not target_cnt_col:
+        table = dset.to_table(columns=[column], filter=expr)
+        ser = pd.Series(table.column(0).to_pandas())
+        vals = ser.dropna().astype(str).unique().tolist()
+        return sorted(vals)[:limit]
+
+    # Build scanner with minimal columns to compute mask
+    scanner = ds.Scanner.from_dataset(
+        dset, columns=list(read_cols), filter=expr, batch_size=8192
     )
-    return sorted(vals)[:limit]
+    uniques: set[str] = set()
+    for rb in scanner.to_batches():
+        if rb.num_rows == 0:
+            continue
+        pdf = rb.to_pandas(types_mapper=pd.ArrowDtype)
+
+        numer = pd.to_numeric(pdf[target_cnt_col], errors="coerce").astype(float)
+        if total_col and total_col in pdf.columns:
+            denom = pd.to_numeric(pdf[total_col], errors="coerce").astype(float)
+        else:
+            col_map = list_biotype_columns()
+            cnt_cols = [c for c in col_map.get("count", []) if c in pdf.columns]
+            denom = pd.DataFrame({c: pd.to_numeric(pdf[c], errors="coerce") for c in cnt_cols}).sum(axis=1).astype(float)
+
+        valid = denom > 0
+        pct = pd.Series(np.nan, index=pdf.index, dtype="float64")
+        pct.loc[valid] = (numer.loc[valid] / denom.loc[valid]) * 100.0
+
+        mask = pct.ge(pmin).where(~pct.isna(), False) & pct.le(pmax).where(~pct.isna(), False)
+        sub = pdf.loc[mask, column].dropna().astype(str).unique().tolist()
+        uniques.update(sub)
+
+        if len(uniques) >= limit:
+            break
+
+    return sorted(list(uniques))[:limit]
+
 
 
 def summarize_biotypes_by_rank(
@@ -695,10 +766,11 @@ def summarize_biotype_totals(
     climate_filter: Optional[Sequence[str]] = None,
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
+    biotype_pct_filter: Optional[dict] = None,      # NEW: {"biotype": str, "min": float, "max": float}
     batch_size: int = 8192,
 ) -> pd.DataFrame:
     """
-    Sum *_count columns across ALL matching rows (no grouping).
+    Sum *_count columns across ALL matching rows (no grouping), honoring the biotype-% row filter if provided.
     Returns: DataFrame ['biotype','count'] sorted by descending count.
     """
     main_path = config.DATA_DIR / config.DASHBOARD_MAIN_FN
@@ -712,7 +784,7 @@ def summarize_biotype_totals(
             return pd.DataFrame(columns=["biotype", "count"])
         accession_filter = list(accs)
 
-    # Predicate (type-aware)
+    # Predicate (type-aware) for taxonomy + accession (+ climate later)
     expr = _build_filter_expr(
         dset=dset,
         taxonomy_filter=taxonomy_filter,
@@ -721,32 +793,94 @@ def summarize_biotype_totals(
         accession_filter=accession_filter,
     )
 
-    # Which *_count columns
+    # Which *_count columns to sum
     if not biotype_cols:
         col_map = list_biotype_columns()
         cols = list(col_map.get("count", []))
     else:
-        cols = list(biotype_cols)
+        cols = [c for c in biotype_cols if c in dset.schema.names]
     if not cols:
         return pd.DataFrame(columns=["biotype", "count"])
 
-    # Scan and sum
+    # Try pushdown for percentage on the chosen biotype (if provided)
+    pct_expr, _pct_col = _build_biotype_pct_pushdown(dset, biotype_pct_filter)
+    if pct_expr is not None:
+        expr = pct_expr if expr is None else (expr & pct_expr)
+
+    # If no pushdown, we may need to compute a row-level mask
+    target_cnt_col = None
+    total_col = config.TOTAL_GENES_COL if (config.TOTAL_GENES_COL in dset.schema.names) else None
+    extra_filter_col = None
+    pmin = pmax = None
+    if biotype_pct_filter and biotype_pct_filter.get("biotype") and pct_expr is None:
+        sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
+        pref = config.GENE_BIOTYPE_PREFIX or ""
+        candidate = f"{pref}{biotype_pct_filter['biotype']}{sfx}"
+        if candidate in dset.schema.names:
+            target_cnt_col = candidate
+            pmin = float(biotype_pct_filter.get("min", 0.0))
+            pmax = float(biotype_pct_filter.get("max", 100.0))
+            if candidate not in cols:
+                extra_filter_col = candidate  # ensure we read it to compute mask
+
+    # Columns to read: all *_count we’re summing + any denominator/extra needed to build mask
+    read_cols: set[str] = set(cols)
+    if extra_filter_col:
+        read_cols.add(extra_filter_col)
+    if total_col:
+        read_cols.add(total_col)
+    elif target_cnt_col:
+        # When no total column, we’ll need all *_count columns to build the denominator for the mask
+        col_map = list_biotype_columns()
+        for c in col_map.get("count", []):
+            if c in dset.schema.names:
+                read_cols.add(c)
+
     sums: Dict[str, float] = {c: 0.0 for c in cols}
-    scanner = ds.Scanner.from_dataset(dset, columns=cols, filter=expr, batch_size=batch_size)
+
+    scanner = ds.Scanner.from_dataset(
+        dset,
+        columns=list(read_cols),
+        filter=expr,
+        batch_size=batch_size,
+    )
+
     for rb in scanner.to_batches():
         if rb.num_rows == 0:
             continue
         pdf = rb.to_pandas(types_mapper=pd.ArrowDtype)
+
+        # If we need a row-level mask for biotype %, compute it now
+        if target_cnt_col:
+            numer = pd.to_numeric(pdf[target_cnt_col], errors="coerce").astype(float)
+            if total_col and total_col in pdf.columns:
+                denom = pd.to_numeric(pdf[total_col], errors="coerce").astype(float)
+            else:
+                # sum of all *_count columns present in this batch
+                col_map = list_biotype_columns()
+                cnt_cols = [c for c in col_map.get("count", []) if c in pdf.columns]
+                denom = pd.DataFrame({c: pd.to_numeric(pdf[c], errors="coerce") for c in cnt_cols}).sum(axis=1).astype(float)
+
+            valid = denom > 0
+            pct = pd.Series(np.nan, index=pdf.index, dtype="float64")
+            pct.loc[valid] = (numer.loc[valid] / denom.loc[valid]) * 100.0
+
+            mask = pct.ge(pmin).where(~pct.isna(), False) & pct.le(pmax).where(~pct.isna(), False)
+            pdf = pdf[mask]
+            if pdf.empty:
+                continue
+
+        # Sum each requested *_count column over the (optionally) masked rows
         for c in cols:
             s = pd.to_numeric(pdf[c], errors="coerce").fillna(0)
             sums[c] += float(s.sum())
 
-    # Build result (strip suffix)
+    # Build tidy result (strip "_count")
     cnt_sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
     rows = []
     for c, v in sums.items():
         name = c[:-len(cnt_sfx)] if c.endswith(cnt_sfx) else c
         rows.append({"biotype": name, "count": float(v)})
 
-    df = pd.DataFrame(rows).sort_values("count", ascending=False).reset_index(drop=True)
-    return df
+    return pd.DataFrame(rows).sort_values("count", ascending=False).reset_index(drop=True)
+
