@@ -96,6 +96,10 @@ def get_navbar() -> html.Header:
                          dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")],
                         className="filter-col",
                     ),
+                    html.Div(
+                        html.Button("Reset biogeo", id="btn-reset-biogeo", n_clicks=0, className="btn-reset"),
+                        className="filter-col",
+                    ),
                 ],
                 className="filters-grid",
             ),
@@ -138,6 +142,10 @@ def get_navbar() -> html.Header:
                              updatemode="mouseup",  # update only on release (keeps callbacks light)
                          )],
                         className="filter-col filter-col--full",
+                    ),
+                    html.Div(
+                        html.Button("Reset biotype filter", id="btn-reset-biotype", n_clicks=0, className="btn-reset"),
+                        className="filter-col",
                     ),
                 ],
                 className="filters-grid",
