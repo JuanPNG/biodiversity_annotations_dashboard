@@ -1,16 +1,18 @@
-# callbacks/global_filters.py  — add/replace with this consolidated version
+# callbacks/global_filters.py  — consolidated + biogeo persistence fix
 
 from __future__ import annotations
-from dash import Input, Output, callback, no_update, State
+from dash import Input, Output, State, callback, no_update
 from utils import config
 from utils.parquet_io import list_biotype_columns
 from utils.data_tools import (
-    list_taxonomy_options,          # you already had this
+    list_taxonomy_options,
     list_biogeo_levels, list_biogeo_values,
-    list_taxonomy_options_cascaded
+    list_taxonomy_options_cascaded,
 )
 
-# --- Init: populate options once on load (taxonomy full lists + biogeo) ---
+# ────────────────────────────────────────────────────────────────────────────────
+# Init: populate options once (do NOT blow away Biogeo values on navigation)
+# ────────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("filter-tax-kingdom", "options"),
     Output("filter-tax-phylum", "options"),
@@ -23,11 +25,20 @@ from utils.data_tools import (
     Output("filter-bio-level", "options"),
     Output("filter-bio-value", "options"),
     Input("url", "pathname"),
+    State("filter-bio-level", "value"),   # 🆕 hydrate Biogeo values options from current level(s)
     prevent_initial_call=False,
 )
-def init_filters(_):
+def init_filters(_, current_bio_levels):
     tax_opts = list_taxonomy_options()
-    levels = list_biogeo_levels()
+    levels_opts = list_biogeo_levels()
+
+    # If user already picked Biogeo level(s), keep the corresponding values’ options;
+    # otherwise, leave whatever is shown today (no_update) so we don’t clear selections.
+    if current_bio_levels:
+        values_opts = list_biogeo_values(current_bio_levels)
+    else:
+        values_opts = no_update
+
     return (
         tax_opts.get("kingdom", []),
         tax_opts.get("phylum", []),
@@ -37,13 +48,15 @@ def init_filters(_):
         tax_opts.get("genus", []),
         tax_opts.get("species", []),
         tax_opts.get("tax_id", []),
-        levels,
-        [],
+        levels_opts,
+        values_opts,  # ← keep or hydrate, never force []
     )
 
-# --- Cascade: when ANY taxonomy rank changes, recompute lower-rank options and prune values ---
+# ────────────────────────────────────────────────────────────────────────────────
+# Taxonomy cascade: recompute lower-rank options and prune invalid values
+# ────────────────────────────────────────────────────────────────────────────────
 @callback(
-    # options (allow duplicates to coexist with init)
+    # options
     Output("filter-tax-kingdom", "options", allow_duplicate=True),
     Output("filter-tax-phylum", "options", allow_duplicate=True),
     Output("filter-tax-class", "options", allow_duplicate=True),
@@ -52,7 +65,7 @@ def init_filters(_):
     Output("filter-tax-genus", "options", allow_duplicate=True),
     Output("filter-tax-species", "options", allow_duplicate=True),
     Output("filter-tax-id", "options", allow_duplicate=True),
-    # values (we prune invalid selections)
+    # values (pruned)
     Output("filter-tax-kingdom", "value"),
     Output("filter-tax-phylum", "value"),
     Output("filter-tax-class", "value"),
@@ -72,7 +85,6 @@ def init_filters(_):
     prevent_initial_call=True,
 )
 def cascade_taxonomy(k, p, c, o, f, g, s, taxid):
-    # Current selections
     selections = {
         "kingdom": k or [],
         "phylum": p or [],
@@ -84,16 +96,13 @@ def cascade_taxonomy(k, p, c, o, f, g, s, taxid):
         "tax_id": taxid or [],
     }
 
-    # Fresh options with higher-rank filters applied
     opts = list_taxonomy_options_cascaded(selections)
 
-    # Helper: prune selected values that are no longer valid under the new options
     def _prune(cur_vals, options):
         if not cur_vals:
             return []
         valid = {o["value"] for o in (options or [])}
-        pruned = [v for v in cur_vals if v in valid]
-        return pruned
+        return [v for v in cur_vals if v in valid]
 
     k2 = _prune(selections["kingdom"], opts.get("kingdom"))
     p2 = _prune(selections["phylum"],  opts.get("phylum"))
@@ -116,16 +125,21 @@ def cascade_taxonomy(k, p, c, o, f, g, s, taxid):
         k2, p2, c2, o2, f2, g2, s2, t2,
     )
 
-# --- Biogeo values change when levels change (unchanged from before) ---
+# ────────────────────────────────────────────────────────────────────────────────
+# Biogeo values options follow level(s) (unchanged), but never force-clear values
+# ────────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("filter-bio-value", "options", allow_duplicate=True),
     Input("filter-bio-level", "value"),
     prevent_initial_call=True,
 )
 def update_biogeo_values(levels_value):
+    # Return options for the selected levels; Dash keeps current values that still exist
     return list_biogeo_values(levels_value or [])
 
-# --- Store global selections (unchanged) ---
+# ────────────────────────────────────────────────────────────────────────────────
+# Persist global selections
+# ────────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("global-filters", "data"),
     Input("filter-tax-kingdom", "value"),
@@ -157,9 +171,10 @@ def store_filters(k, p, c, o, f, g, s, taxid, levels, values):
         "bio_levels": levels or [],
         "bio_values": values or [],
         "taxonomy": [],   # legacy
-        "climate": [],    # placeholder until numeric sliders arrive
+        "climate": [],    # sliders later
     }
 
+# Reset taxonomy button
 @callback(
     Output("filter-tax-kingdom", "value", allow_duplicate=True),
     Output("filter-tax-phylum",  "value", allow_duplicate=True),
@@ -170,15 +185,15 @@ def store_filters(k, p, c, o, f, g, s, taxid, levels, values):
     Output("filter-tax-species", "value", allow_duplicate=True),
     Output("filter-tax-id",      "value", allow_duplicate=True),
     Input("btn-reset-taxonomy", "n_clicks"),
-    prevent_initial_call=True,  # required with allow_duplicate
+    prevent_initial_call=True,
 )
 def reset_taxonomy(_n):
-    # Clear all taxonomy rank selections
     empty = []
     return empty, empty, empty, empty, empty, empty, empty, empty
 
-
-# A) populate the biotype dropdown with names (from *_count columns)
+# ────────────────────────────────────────────────────────────────────────────────
+# Gene biotype % filter: options + persist selection in global store
+# ────────────────────────────────────────────────────────────────────────────────
 @callback(
     Output("bio-pct-biotype", "options"),
     Input("url", "pathname"),
@@ -189,11 +204,9 @@ def init_biotype_pct_options(_):
     cnt = sorted(set(col_map.get("count", [])))
     sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
     names = [(c[:-len(sfx)] if c.endswith(sfx) else c) for c in cnt]
-    # de-dupe preserving order
     seen = set()
     return [{"label": n, "value": n} for n in names if (n not in seen and not seen.add(n))]
 
-# B) merge the biotype-% selection into the global-filters store
 @callback(
     Output("global-filters", "data", allow_duplicate=True),
     Input("bio-pct-biotype", "value"),
@@ -204,12 +217,12 @@ def init_biotype_pct_options(_):
 def set_biotype_pct_in_store(biotype_name, pct_range, store):
     store = store or {}
     gf = dict(store)
-    # If filter is effectively "off", remove it
     if not biotype_name or not pct_range or pct_range == [0, 100]:
-        if "biotype_pct" in gf:
-            gf.pop("biotype_pct", None)
+        gf.pop("biotype_pct", None)
         return gf
-
-    # Persist selection as a small dict
-    gf["biotype_pct"] = {"biotype": str(biotype_name), "min": float(pct_range[0]), "max": float(pct_range[1])}
+    gf["biotype_pct"] = {
+        "biotype": str(biotype_name),
+        "min": float(pct_range[0]),
+        "max": float(pct_range[1]),
+    }
     return gf
