@@ -5,6 +5,46 @@ from dash import html, dcc
 
 dash.register_page(__name__, path="/", name="Home")
 
+from dash import dcc, html
+
+nav_cards = html.Div(
+    [
+        dcc.Link(
+            html.Div(
+                [html.Div("Data Browser", className="card-title"),
+                 html.Div("Browse and filter rows with server-side paging.", className="card-sub")],
+                className="nav-card"
+            ),
+            href="/data-browser",
+            className="nav-card-link",
+        ),
+        dcc.Link(
+            html.Div(
+                [html.Div("Genome Annotations", className="card-title"),
+                 html.Div("Stacked % by biotype with drilldown.", className="card-sub")],
+                className="nav-card"
+            ),
+            href="/genome-annotations",
+            className="nav-card-link",
+        ),
+        dcc.Link(
+            html.Div(
+                [html.Div("Maps (soon)", className="card-title"),
+                 html.Div("GBIF occurrences with clustering.", className="card-sub")],
+                className="nav-card nav-card--disabled"
+            ),
+            href="#",
+            className="nav-card-link",
+        ),
+    ],
+    className="nav-cards-grid",
+)
+
+# then include `nav_cards` in the layout where you want it:
+# layout = html.Main([... existing content ..., nav_cards, ...])
+
+
+
 layout = html.Main(
     [
         html.H1("Welcome 👋"),
@@ -63,6 +103,7 @@ layout = html.Main(
                 html.Li("Genome Annotations — Stacked % bars with drill up/down."),
             ]
         ),
+        nav_cards
     ],
     className="page-container",
 )
