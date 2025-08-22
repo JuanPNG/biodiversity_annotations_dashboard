@@ -40,6 +40,7 @@ import callbacks.global_filters          # noqa: F401
 import callbacks.data_browser_callbacks  # noqa: F401
 import callbacks.genome_annotations_callbacks  # noqa: F401
 import callbacks.ui_badges  # noqa: F401
+import callbacks.home_kpis  # noqa: F401
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8050)
