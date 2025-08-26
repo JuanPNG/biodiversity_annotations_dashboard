@@ -114,6 +114,8 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
     levels   = (global_filters or {}).get("bio_levels") or []
     values   = (global_filters or {}).get("bio_values") or []
     bio_pct = (global_filters or {}).get("biotype_pct") or None
+    climate_ranges = (global_filters or {}).get("climate_ranges") or None
+    biogeo_ranges = (global_filters or {}).get("biogeo_ranges") or None
     page = int(page_value or 1)
     size = int(page_size or 50)
 
@@ -137,6 +139,8 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
             bio_levels_filter=levels,
             bio_values_filter=values,
             biotype_pct_filter=bio_pct,
+            climate_ranges=climate_ranges,
+            biogeo_ranges=biogeo_ranges,
         )
     except Exception as e:
         return no_update, no_update, f"Error loading data: {e}"
@@ -157,6 +161,8 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
             bio_levels_filter=levels,
             bio_values_filter=values,
             biotype_pct_filter=bio_pct,
+            climate_ranges=climate_ranges,
+            biogeo_ranges=biogeo_ranges,
         )
     except Exception:
         total = None
