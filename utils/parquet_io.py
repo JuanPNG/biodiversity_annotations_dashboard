@@ -116,6 +116,21 @@ def _build_biotype_pct_pushdown(dset: ds.Dataset, biotype_pct_filter: Optional[d
         return expr, col
     return None, None
 
+def _build_range_expr(dset: ds.Dataset, ranges: Optional[dict]) -> Optional[ds.Expression]:
+    """Build (col BETWEEN lo AND hi) AND ... for a dict like {'col': [lo, hi]}."""
+    if not ranges:
+        return None
+    expr = None
+    for col, pair in ranges.items():
+        if col not in dset.schema.names:
+            continue
+        try:
+            lo, hi = float(pair[0]), float(pair[1])
+        except Exception:
+            continue
+        e = (ds.field(col) >= lo) & (ds.field(col) <= hi)
+        expr = e if expr is None else (expr & e)
+    return expr
 
 def list_biotype_columns() -> dict[str, list[str]]:
     """
@@ -229,6 +244,8 @@ def load_dashboard_page(
     bio_values_filter: Optional[Sequence[str]] = None,
     climate_filter: Optional[Dict] = None,           # reserved for later
     biotype_pct_filter: Optional[dict] = None,       # {"biotype": str, "min": float, "max": float}
+    climate_ranges: Optional[dict] = None,
+    biogeo_ranges: Optional[dict] = None,
 ) -> Tuple[pd.DataFrame, int]:
     """
     Return (page_df, total_rows_after_filters) for the Data Browser.
@@ -260,6 +277,14 @@ def load_dashboard_page(
         climate_filter=None,  # sliders later
         accession_filter=accession_filter,
     )
+
+    # Add numeric range pushdown
+    r1 = _build_range_expr(dset, climate_ranges)
+    if r1 is not None:
+        expr = r1 if expr is None else (expr & r1)
+    r2 = _build_range_expr(dset, biogeo_ranges)
+    if r2 is not None:
+        expr = r2 if expr is None else (expr & r2)
 
     pct_expr, pct_col = _build_biotype_pct_pushdown(dset, biotype_pct_filter)
     if pct_expr is not None:
@@ -352,6 +377,8 @@ def count_dashboard_rows(
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
     biotype_pct_filter: Optional[dict] = None,     # {"biotype": str, "min": float, "max": float}
+    climate_ranges: Optional[dict] = None,
+    biogeo_ranges: Optional[dict] = None,
 ) -> int:
     """
         Count rows after applying taxonomy + biogeo pushdown and optional biotype-% row filter.
@@ -374,6 +401,14 @@ def count_dashboard_rows(
         accession_filter=accession_filter,
         taxonomy_filter_map=taxonomy_filter_map,
     )
+
+    # Add numeric ranges for clim and biogeo
+    r1 = _build_range_expr(dset, climate_ranges)
+    if r1 is not None:
+        expr = r1 if expr is None else (expr & r1)
+    r2 = _build_range_expr(dset, biogeo_ranges)
+    if r2 is not None:
+        expr = r2 if expr is None else (expr & r2)
 
     # --- try percentage pushdown first ---
     pct_expr, pct_col = _build_biotype_pct_pushdown(dset, biotype_pct_filter)
@@ -488,7 +523,9 @@ def distinct_values_for_column(
     climate_filter: Optional[Sequence[str]] = None,
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
-    biotype_pct_filter: Optional[dict] = None,         # NEW
+    biotype_pct_filter: Optional[dict] = None,
+    climate_ranges: Optional[dict] = None,
+    biogeo_ranges: Optional[dict] = None,
     limit: int = 5000,
 ) -> list[str]:
     """
@@ -515,6 +552,14 @@ def distinct_values_for_column(
         climate_filter=climate_filter,
         accession_filter=accession_filter,
     )
+
+    # Add numeric ranges for clim and biogeo
+    r1 = _build_range_expr(dset, climate_ranges)
+    if r1 is not None:
+        expr = r1 if expr is None else (expr & r1)
+    r2 = _build_range_expr(dset, biogeo_ranges)
+    if r2 is not None:
+        expr = r2 if expr is None else (expr & r2)
 
     # Try percentage pushdown first
     pct_expr, _pct_col = _build_biotype_pct_pushdown(dset, biotype_pct_filter)
@@ -606,6 +651,8 @@ def summarize_biotypes_by_rank(
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
     biotype_pct_filter: Optional[dict] = None,
+    climate_ranges: Optional[dict] = None,
+    biogeo_ranges: Optional[dict] = None,
     batch_size: int = 8192,
 ) -> pd.DataFrame:
     """
@@ -637,6 +684,14 @@ def summarize_biotypes_by_rank(
         climate_filter=climate_filter,
         accession_filter=accession_filter,
     )
+
+    r1 = _build_range_expr(dset, climate_ranges)
+    if r1 is not None:
+        expr = r1 if expr is None else (expr & r1)
+    r2 = _build_range_expr(dset, biogeo_ranges)
+    if r2 is not None:
+        expr = r2 if expr is None else (expr & r2)
+
     #  --- NEW: try to push down the % filter before scanning ---
     pct_expr, _ = _build_biotype_pct_pushdown(dset, biotype_pct_filter)
     if pct_expr is not None:
@@ -767,6 +822,8 @@ def summarize_biotype_totals(
     bio_levels_filter: Optional[Sequence[str]] = None,
     bio_values_filter: Optional[Sequence[str]] = None,
     biotype_pct_filter: Optional[dict] = None,      # NEW: {"biotype": str, "min": float, "max": float}
+    climate_ranges: Optional[dict] = None,
+    biogeo_ranges: Optional[dict] = None,
     batch_size: int = 8192,
 ) -> pd.DataFrame:
     """
@@ -792,6 +849,14 @@ def summarize_biotype_totals(
         climate_filter=climate_filter,
         accession_filter=accession_filter,
     )
+
+    # Add numeric ranges for clim and biogeo
+    r1 = _build_range_expr(dset, climate_ranges)
+    if r1 is not None:
+        expr = r1 if expr is None else (expr & r1)
+    r2 = _build_range_expr(dset, biogeo_ranges)
+    if r2 is not None:
+        expr = r2 if expr is None else (expr & r2)
 
     # Which *_count columns to sum
     if not biotype_cols:
