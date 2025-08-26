@@ -100,6 +100,45 @@ def get_navbar() -> html.Header:
                         html.Button("Reset biogeo", id="btn-reset-biogeo", n_clicks=0, className="btn-reset"),
                         className="filter-col",
                     ),
+                    # --- Climate (numeric) ---
+                    html.Div(
+                        [html.Label("BIO1 mean (°C)", className="control-label"),
+                         dcc.RangeSlider(
+                             id="climate-range-clim_bio1_mean",
+                             min=0, max=100, value=[0, 100],  # will be set by callback
+                             allowCross=False,
+                             tooltip={"always_visible": False, "placement": "bottom"},
+                             updatemode="mouseup",
+                             persistence=True, persistence_type="session",
+                         )],
+                        className="filter-col",
+                    ),
+                    html.Div(
+                        [html.Label("BIO12 mean (mm)", className="control-label"),
+                         dcc.RangeSlider(
+                             id="climate-range-clim_bio12_mean",
+                             min=0, max=1000, value=[0, 1000],  # will be set by callback
+                             allowCross=False,
+                             tooltip={"always_visible": False, "placement": "bottom"},
+                             updatemode="mouseup",
+                             persistence=True, persistence_type="session",
+                         )],
+                        className="filter-col",
+                    ),
+
+                    # --- Biogeography / Distribution (numeric) ---
+                    html.Div(
+                        [html.Label("Range area (km²)", className="control-label"),
+                         dcc.RangeSlider(
+                             id="biogeo-range-range_km2",
+                             min=0, max=1_000_000, value=[0, 1_000_000],  # will be set by callback
+                             allowCross=False,
+                             tooltip={"always_visible": False, "placement": "bottom"},
+                             updatemode="mouseup",
+                             persistence=True, persistence_type="session",
+                         )],
+                        className="filter-col",
+                    ),
                 ],
                 className="filters-grid",
             ),
