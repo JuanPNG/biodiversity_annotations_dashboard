@@ -204,16 +204,28 @@ def set_biotype_pct_in_store(biotype_name, pct_range, store):
     gf["biotype_pct"] = {"biotype": str(biotype_name), "min": float(pct_range[0]), "max": float(pct_range[1])}
     return gf
 
-# --- Reset BIOGEO (levels + values) ---
+# --- Reset BIOGEO (levels + values + ranges) ---
 @callback(
     Output("filter-bio-level", "value", allow_duplicate=True),
     Output("filter-bio-value", "value", allow_duplicate=True),
+    Output("biogeo-range-range_km2", "value", allow_duplicate=True),
+    Output("global-filters", "data", allow_duplicate=True),
     Input("btn-reset-biogeo", "n_clicks"),
+    State("biogeo-range-range_km2", "min"),
+    State("biogeo-range-range_km2", "max"),
+    State("global-filters", "data"),
     prevent_initial_call=True,
 )
-def reset_biogeo(_n):
-    # Clear selected levels and values
-    return [], []
+def reset_biogeo(n_clicks, r_min, r_max, store):
+    if not n_clicks:
+        return no_update, no_update, no_update, no_update
+    gf = dict(store or {})
+    # Clear all biogeo bits
+    gf["bio_levels"] = []
+    gf["bio_values"] = []
+    gf.pop("biogeo_ranges", None)
+    # Snap slider back to full domain
+    return [], [], [r_min, r_max], gf
 
 # --- Reset BIOTYPE % (dropdown + slider) ---
 @callback(
@@ -357,3 +369,25 @@ def persist_numeric_ranges(bio1_val, bio12_val, range_val,
     if geo:  gf["biogeo_ranges"] = geo
     else:    gf.pop("biogeo_ranges", None)
     return gf
+
+
+# --- Reset Climate: clear categorical + numeric, and reset slider values to full domain ---
+@callback(
+    Output("climate-range-clim_bio1_mean", "value", allow_duplicate=True),
+    Output("climate-range-clim_bio12_mean", "value", allow_duplicate=True),
+    Output("global-filters", "data", allow_duplicate=True),
+    Input("btn-reset-climate", "n_clicks"),
+    State("climate-range-clim_bio1_mean", "min"),
+    State("climate-range-clim_bio1_mean", "max"),
+    State("climate-range-clim_bio12_mean", "min"),
+    State("climate-range-clim_bio12_mean", "max"),
+    State("global-filters", "data"),
+    prevent_initial_call=True,
+)
+def reset_climate(n_clicks, b1_min, b1_max, b12_min, b12_max, store):
+    if not n_clicks:
+        return no_update, no_update, no_update
+    gf = dict(store or {})
+    gf.pop("climate_ranges", None)
+    gf["climate"] = []
+    return [b1_min, b1_max], [b12_min, b12_max], gf
