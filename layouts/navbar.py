@@ -70,12 +70,64 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
-    # --- ENVIRONMENT (biogeo + climate) (same IDs as before) ---
-    environment_group = html.Details(
+    # --- ENVIRONMENT (biogeo + climate) ---
+    # --- CLIMATE (categorical + numeric) ---
+    climate_group = html.Details(
         [
             html.Summary(
-                ["🌍 Environment (biogeography + climate)",
-                 html.Span("0", id="env-summary-badge", className="badge")],
+                ["🌡️ Climate",
+                 html.Span("0", id="climate-summary-badge", className="badge")],
+                className="filter-summary",
+            ),
+            html.Div(
+                [
+                    html.Div(
+                        [html.Label("Climate (categorical)", className="control-label"),
+                         dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")],
+                        className="filter-col",
+                    ),
+                    html.Div(
+                        [html.Label("BIO1 mean (°C)", className="control-label"),
+                         dcc.RangeSlider(
+                             id="climate-range-clim_bio1_mean",
+                             min=0, max=100, value=[0, 100],  # initialized by callback
+                             allowCross=False,
+                             tooltip={"always_visible": False, "placement": "bottom"},
+                             updatemode="mouseup",
+                             persistence=True, persistence_type="session",
+                         )],
+                        className="filter-col",
+                    ),
+                    html.Div(
+                        [html.Label("BIO12 mean (mm)", className="control-label"),
+                         dcc.RangeSlider(
+                             id="climate-range-clim_bio12_mean",
+                             min=0, max=1000, value=[0, 1000],  # initialized by callback
+                             allowCross=False,
+                             tooltip={"always_visible": False, "placement": "bottom"},
+                             updatemode="mouseup",
+                             persistence=True, persistence_type="session",
+                         )],
+                        className="filter-col",
+                    ),
+                    html.Div(
+                        html.Button("Reset climate", id="btn-reset-climate", n_clicks=0, className="btn-reset"),
+                        className="filter-col",
+                    ),
+                ],
+                className="filters-grid",
+            ),
+        ],
+        open=False,
+        className="filter-group",
+    )
+
+    # --- BIOGEOGRAPHY (levels/values + distribution numeric) ---
+    biogeography_group = html.Details(
+        [
+            html.Summary(
+                ["🌍 Biogeography",
+                 html.Span("0", id="biogeo-summary-badge", className="badge")],
                 className="filter-summary",
             ),
             html.Div(
@@ -92,51 +144,19 @@ def get_navbar() -> html.Header:
                         className="filter-col",
                     ),
                     html.Div(
-                        [html.Label("Climate (categorical)", className="control-label"),
-                         dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")],
-                        className="filter-col",
-                    ),
-                    html.Div(
-                        html.Button("Reset biogeo", id="btn-reset-biogeo", n_clicks=0, className="btn-reset"),
-                        className="filter-col",
-                    ),
-                    # --- Climate (numeric) ---
-                    html.Div(
-                        [html.Label("BIO1 mean (°C)", className="control-label"),
-                         dcc.RangeSlider(
-                             id="climate-range-clim_bio1_mean",
-                             min=0, max=100, value=[0, 100],  # will be set by callback
-                             allowCross=False,
-                             tooltip={"always_visible": False, "placement": "bottom"},
-                             updatemode="mouseup",
-                             persistence=True, persistence_type="session",
-                         )],
-                        className="filter-col",
-                    ),
-                    html.Div(
-                        [html.Label("BIO12 mean (mm)", className="control-label"),
-                         dcc.RangeSlider(
-                             id="climate-range-clim_bio12_mean",
-                             min=0, max=1000, value=[0, 1000],  # will be set by callback
-                             allowCross=False,
-                             tooltip={"always_visible": False, "placement": "bottom"},
-                             updatemode="mouseup",
-                             persistence=True, persistence_type="session",
-                         )],
-                        className="filter-col",
-                    ),
-
-                    # --- Biogeography / Distribution (numeric) ---
-                    html.Div(
                         [html.Label("Range area (km²)", className="control-label"),
                          dcc.RangeSlider(
                              id="biogeo-range-range_km2",
-                             min=0, max=1_000_000, value=[0, 1_000_000],  # will be set by callback
+                             min=0, max=1_000_000, value=[0, 1_000_000],  # initialized by callback
                              allowCross=False,
                              tooltip={"always_visible": False, "placement": "bottom"},
                              updatemode="mouseup",
                              persistence=True, persistence_type="session",
                          )],
+                        className="filter-col",
+                    ),
+                    html.Div(
+                        html.Button("Reset biogeography", id="btn-reset-biogeo", n_clicks=0, className="btn-reset"),
                         className="filter-col",
                     ),
                 ],
@@ -202,7 +222,7 @@ def get_navbar() -> html.Header:
                  html.Span("0", id="all-summary-badge", className="badge")],
                 className="filter-summary",
             ),
-            html.Div([taxonomy_group, environment_group, biotype_group], className="filters-row"),
+            html.Div([taxonomy_group, biogeography_group, climate_group, biotype_group], className="filters-row"),
         ],
         open=True,  # show open by default; user can collapse
         className="filter-group",
