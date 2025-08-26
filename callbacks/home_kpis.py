@@ -12,6 +12,7 @@ from utils.parquet_io import (
     _dataset,                      # internal helpers — OK to use in callbacks
     _build_filter_expr,
     _build_biotype_pct_pushdown,
+    _build_range_expr,
     list_biotype_columns,
     distinct_values_for_column,
     summarize_biotype_totals,
@@ -34,7 +35,8 @@ def _filtered_accessions(
     climate_filter: Sequence[str] | None,
     bio_levels_filter: Sequence[str] | None,
     bio_values_filter: Sequence[str] | None,
-    biotype_pct_filter: Dict | None,   # biotype% awareness
+    biotype_pct_filter: Dict | None,
+    climate_ranges=None, biogeo_ranges=None
 ) -> Set[str]:
     """
     Return the set of accessions from dashboard_main that survive:
@@ -52,6 +54,13 @@ def _filtered_accessions(
         climate_filter=climate_filter or [],
         accession_filter=None,
     )
+
+    r1 = _build_range_expr(main, climate_ranges)
+    if r1 is not None:
+        expr = r1 if expr is None else (expr & r1)
+    r2 = _build_range_expr(main, biogeo_ranges)
+    if r2 is not None:
+        expr = r2 if expr is None else (expr & r2)
 
     # Restrict to accessions that match selected biogeo level/value (if any)
     if bio_levels_filter or bio_values_filter:
@@ -155,6 +164,8 @@ def update_home_kpis(gf):
     bio_lvls = gf.get("bio_levels") or []
     bio_vals = gf.get("bio_values") or []
     biopct   = gf.get("biotype_pct") or None
+    clim_rng = gf.get("climate_ranges") or None
+    geo_rng = gf.get("biogeo_ranges") or None
 
     # --- Taxonomy distinct counts (respecting ALL filters, incl. biotype%) ---
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
@@ -166,12 +177,15 @@ def update_home_kpis(gf):
             climate_filter=climate,
             bio_levels_filter=bio_lvls,
             bio_values_filter=bio_vals,
-            biotype_pct_filter=biopct,  # biotype% aware
+            biotype_pct_filter=biopct,
+            climate_ranges=clim_rng,
+            biogeo_ranges=geo_rng,
         )
         tax_counts.append(len(vals))
 
     # --- Biogeography distinct counts among filtered accessions (biotype% aware) ---
-    accs = _filtered_accessions(tax_map, climate, bio_lvls, bio_vals, biopct)
+    accs = _filtered_accessions(tax_map, climate, bio_lvls, bio_vals, biopct,
+                                clim_rng, geo_rng)
     realm_cnt = biome_cnt = ecoregion_cnt = 0
     if accs:
         bset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
@@ -262,6 +276,8 @@ def update_home_kpis(gf):
         bio_levels_filter=bio_lvls,
         bio_values_filter=bio_vals,
         biotype_pct_filter=biopct,
+        climate_ranges=clim_rng,
+        biogeo_ranges=geo_rng,
     )
     if isinstance(biotot, pd.DataFrame) and not biotot.empty:
         top = biotot.nlargest(3, "count")
