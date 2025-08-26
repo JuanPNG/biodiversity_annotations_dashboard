@@ -119,6 +119,8 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
     levels       = (global_filters or {}).get("bio_levels") or []
     values       = (global_filters or {}).get("bio_values") or []
     bio_pct = (global_filters or {}).get("biotype_pct") or None
+    clim_rng = (global_filters or {}).get("climate_ranges") or None
+    geo_rng = (global_filters or {}).get("biogeo_ranges") or None
 
     # Apply drill path as additional taxonomy filters
     drill = (drill_store or {}).get("path", [])
@@ -140,6 +142,8 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
             bio_levels_filter=levels,
             bio_values_filter=values,
             biotype_pct_filter=bio_pct,
+            climate_ranges=clim_rng,
+            biogeo_ranges=geo_rng,
         )
     except Exception as e:
         return {"data": [], "layout": {"height": 560}}, f"Error: {e}", ""
@@ -159,6 +163,8 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
             climate_filter=[],  # none yet
             bio_levels_filter=levels,
             bio_values_filter=values,
+            climate_ranges=clim_rng,
+            biogeo_ranges=geo_rng,
         )
         ordered = [b for b in totals["biotype"].tolist() if b in biotypes_all]
         # keep any rare biotypes (not in totals due to zeros) at the end, alphabetically
