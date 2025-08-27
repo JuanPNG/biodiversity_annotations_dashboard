@@ -30,9 +30,10 @@ app.layout = app_shell
 from pages import home as _home
 from pages import data_browser as _data_browser
 from pages import genome_annotations as _genome_annotations
+from pages import biotype_environment as _biotype_environment
 
 app.validation_layout = html.Div(
-    [app_shell, _home.layout, _data_browser.layout, _genome_annotations.layout]
+    [app_shell, _home.layout, _data_browser.layout, _genome_annotations.layout, _biotype_environment.layout]
 )
 
 # --- Register callbacks AFTER layout defined ---
@@ -41,6 +42,7 @@ import callbacks.data_browser_callbacks  # noqa: F401
 import callbacks.genome_annotations_callbacks  # noqa: F401
 import callbacks.ui_badges  # noqa: F401
 import callbacks.home_kpis  # noqa: F401
+import callbacks.biotype_environment_callbacks  # noqa: F401
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=8050)
