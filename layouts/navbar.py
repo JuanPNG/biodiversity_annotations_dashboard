@@ -1,6 +1,42 @@
 from __future__ import annotations
 from dash import html, dcc
 
+
+# ADD these imports:
+from utils import parquet_io
+
+# Read all extents we need in a single call (cached in parquet_io)
+_ENV_COLS = ["clim_bio1_mean", "clim_bio12_mean", "range_km2"]
+try:
+    _ENV_EXT = parquet_io.get_column_min_max(_ENV_COLS)
+except Exception:
+    _ENV_EXT = {c: (None, None) for c in _ENV_COLS}
+
+
+def _slider_from_col(label: str, slider_id: str, col: str, fallback: tuple[float, float]) -> html.Div:
+    """
+    Build a RangeSlider initialized to the dataset's min/max for the given column.
+    Falls back if dataset/column is missing.
+    """
+    vmin, vmax = _ENV_EXT.get(col, (None, None))
+    if vmin is None or vmax is None:
+        vmin, vmax = fallback
+
+    return html.Div(
+        [
+            html.Label(label, className="control-label"),
+            dcc.RangeSlider(
+                id=slider_id,
+                min=vmin, max=vmax, value=[vmin, vmax],
+                allowCross=False,
+                tooltip={"always_visible": False, "placement": "bottom"},
+                updatemode="mouseup",
+                persistence=True, persistence_type="session",
+            ),
+        ],
+        className="filter-col",
+    )
+
 def get_navbar() -> html.Header:
     links = [
         dcc.Link("Home", href="/", className="nav-link"),
@@ -87,30 +123,45 @@ def get_navbar() -> html.Header:
                          dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")],
                         className="filter-col",
                     ),
-                    html.Div(
-                        [html.Label("Annual Mean Temperature (°C)", className="control-label"),
-                         dcc.RangeSlider(
-                             id="climate-range-clim_bio1_mean",
-                             min=0, max=100, value=[0, 100],  # initialized by callback
-                             allowCross=False,
-                             tooltip={"always_visible": False, "placement": "bottom"},
-                             updatemode="mouseup",
-                             persistence=True, persistence_type="session",
-                         )],
-                        className="filter-col",
+                    # html.Div(
+                    #     [html.Label("Annual Mean Temperature (°C)", className="control-label"),
+                    #      dcc.RangeSlider(
+                    #          id="climate-range-clim_bio1_mean",
+                    #          min=0, max=100, value=[0, 100],  # initialized by callback
+                    #          allowCross=False,
+                    #          tooltip={"always_visible": False, "placement": "bottom"},
+                    #          updatemode="mouseup",
+                    #          persistence=True, persistence_type="session",
+                    #      )],
+                    #     className="filter-col",
+                    # ),
+                    # html.Div(
+                    #     [html.Label("Annual Precipitation (mm)", className="control-label"),
+                    #      dcc.RangeSlider(
+                    #          id="climate-range-clim_bio12_mean",
+                    #          min=0, max=1000, value=[0, 1000],  # initialized by callback
+                    #          allowCross=False,
+                    #          tooltip={"always_visible": False, "placement": "bottom"},
+                    #          updatemode="mouseup",
+                    #          persistence=True, persistence_type="session",
+                    #      )],
+                    #     className="filter-col",
+                    # ),
+
+                    # REPLACE the two hard-coded sliders with data-driven ones:
+                    _slider_from_col(
+                        "Annual Mean Temperature (°C)",
+                        "climate-range-clim_bio1_mean",
+                        "clim_bio1_mean",
+                        fallback=(-50.0, 50.0),
                     ),
-                    html.Div(
-                        [html.Label("Annual Precipitation (mm)", className="control-label"),
-                         dcc.RangeSlider(
-                             id="climate-range-clim_bio12_mean",
-                             min=0, max=1000, value=[0, 1000],  # initialized by callback
-                             allowCross=False,
-                             tooltip={"always_visible": False, "placement": "bottom"},
-                             updatemode="mouseup",
-                             persistence=True, persistence_type="session",
-                         )],
-                        className="filter-col",
+                    _slider_from_col(
+                        "Annual Precipitation (mm)",
+                        "climate-range-clim_bio12_mean",
+                        "clim_bio12_mean",
+                        fallback=(0.0, 8000.0),
                     ),
+
                     html.Div(
                         html.Button("Reset climate", id="btn-reset-climate", n_clicks=0, className="btn-reset"),
                         className="filter-col",
@@ -144,17 +195,24 @@ def get_navbar() -> html.Header:
                          dcc.Dropdown(id="filter-bio-value", options=[], multi=True, placeholder="pick regions…")],
                         className="filter-col",
                     ),
-                    html.Div(
-                        [html.Label("Distribution range size (km²)", className="control-label"),
-                         dcc.RangeSlider(
-                             id="biogeo-range-range_km2",
-                             min=0, max=1_000_000, value=[0, 1_000_000],  # initialized by callback
-                             allowCross=False,
-                             tooltip={"always_visible": False, "placement": "bottom"},
-                             updatemode="mouseup",
-                             persistence=True, persistence_type="session",
-                         )],
-                        className="filter-col",
+                    # html.Div(
+                    #     [html.Label("Distribution range size (km²)", className="control-label"),
+                    #      dcc.RangeSlider(
+                    #          id="biogeo-range-range_km2",
+                    #          min=0, max=1_000_000, value=[0, 1_000_000],  # initialized by callback
+                    #          allowCross=False,
+                    #          tooltip={"always_visible": False, "placement": "bottom"},
+                    #          updatemode="mouseup",
+                    #          persistence=True, persistence_type="session",
+                    #      )],
+                    #     className="filter-col",
+                    # ),
+
+                    _slider_from_col(
+                        "Distribution range size (km²)",
+                        "biogeo-range-range_km2",
+                        "range_km2",
+                        fallback=(0.0, 1_000_000.0),
                     ),
                     html.Div(
                         html.Button("Reset biogeography", id="btn-reset-biogeo", n_clicks=0, className="btn-reset"),
