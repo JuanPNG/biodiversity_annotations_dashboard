@@ -11,20 +11,16 @@ dash.register_page(
     name="Biotype vs Environment",
 )
 
+# X options (feel free to extend later)
 CLIMATE_X_CHOICES = ["clim_bio1_mean", "clim_bio12_mean"]
-DIST_X_CHOICES = ["range_km2"]
+DIST_X_CHOICES = ["range_km2"]  # you can add mean_elevation later
 
 
 def layout():
-    return html.Main(
+    # --- Plot controls (collapsible) ---
+    plot_controls_group = html.Details(
         [
-            html.H2("Biotype vs Environment"),
-            html.P(
-                "Explore relationships between gene biotype and climate/distribution. "
-                "All global filters (taxonomy, biogeography, climate, numeric ranges) apply."
-            ),
-
-            # Controls row
+            html.Summary("Plot controls", className="filter-summary"),
             html.Div(
                 [
                     html.Div(
@@ -42,7 +38,6 @@ def layout():
                         ],
                         className="db-control db-control--wide",
                     ),
-
                     html.Div(
                         [
                             html.Label("Y metric", className="control-label"),
@@ -61,55 +56,6 @@ def layout():
                         ],
                         className="db-control db-control--narrow",
                     ),
-
-                    html.Div(
-                        [
-                            html.Label("Climate X", className="control-label"),
-                            dcc.Dropdown(
-                                id="bs-x-climate",
-                                options=[{"label": c, "value": c} for c in CLIMATE_X_CHOICES],
-                                value=CLIMATE_X_CHOICES[0],
-                                clearable=False,
-                                persistence=True, persistence_type="session",
-                                style={"width": "100%"},
-                            ),
-                        ],
-                        className="db-control db-control--narrow",
-                    ),
-                    html.Div(
-                        [
-                            html.Label("Distribution X", className="control-label"),
-                            dcc.Dropdown(
-                                id="bs-x-dist",
-                                options=[{"label": c, "value": c} for c in DIST_X_CHOICES],
-                                value=DIST_X_CHOICES[0],
-                                clearable=False,
-                                persistence=True, persistence_type="session",
-                                style={"width": "100%"},
-                            ),
-                        ],
-                        className="db-control db-control--narrow",
-                    ),
-
-                    html.Div(
-                        [
-                            html.Label("Log axes", className="control-label"),
-                            dcc.Checklist(
-                                id="bs-log",
-                                options=[
-                                    {"label": "Log Climate X", "value": "log_x_clim"},
-                                    {"label": "Log Dist X", "value": "log_x_dist"},
-                                    {"label": "Log Y", "value": "log_y"},
-                                ],
-                                value=[],
-                                inputClassName="checkbox-input",
-                                labelClassName="checkbox-label",
-                                persistence=True, persistence_type="session",
-                            ),
-                        ],
-                        className="db-control db-control--narrow",
-                    ),
-
                     html.Div(
                         [
                             html.Label("Trendlines", className="control-label"),
@@ -124,7 +70,6 @@ def layout():
                         ],
                         className="db-control db-control--narrow",
                     ),
-
                     html.Div(
                         [
                             html.Label("Point size", className="control-label"),
@@ -139,7 +84,20 @@ def layout():
                         ],
                         className="db-control db-control--narrow",
                     ),
-
+                    html.Div(
+                        [
+                            html.Label("Log Y", className="control-label"),
+                            dcc.Checklist(
+                                id="bs-logy",
+                                options=[{"label": "Enable", "value": "on"}],
+                                value=[],
+                                inputClassName="checkbox-input",
+                                labelClassName="checkbox-label",
+                                persistence=True, persistence_type="session",
+                            ),
+                        ],
+                        className="db-control db-control--narrow",
+                    ),
                     html.Div(
                         [
                             html.Label("Point cap (0 = all)", className="control-label"),
@@ -156,13 +114,95 @@ def layout():
                         className="db-control db-control--narrow",
                     ),
                 ],
-                className="db-controls",
+                className="db-controls",  # reuse your existing row styling inside the collapsible
+            ),
+        ],
+        open=False,                # collapsed by default
+        className="filter-group",  # same styling as your other collapsibles
+    )
+
+    return html.Main(
+        [
+            html.H2("Biotype vs Environment"),
+            html.P(
+                "Explore relationships between gene biotype abundance and climate/distribution. "
+                "All global filters (taxonomy, biogeography, climate, numeric ranges, biotype%) apply."
             ),
 
-            html.Div(className="charts-grid two", children=[
-                dcc.Graph(id="bs-fig-climate", config={"displayModeBar": False}),
-                dcc.Graph(id="bs-fig-dist", config={"displayModeBar": False}),
-            ]),
+            plot_controls_group,
+
+            # Panel A: Climate (controls on the side)
+            html.Div(
+                className="viz-split",
+                children=[
+                    html.Div(
+                        className="panel",
+                        children=[
+                            html.H4("Climate X", className="panel-title"),
+                            dcc.Dropdown(
+                                id="bs-x-climate",
+                                options=[{"label": c, "value": c} for c in CLIMATE_X_CHOICES],
+                                value=CLIMATE_X_CHOICES[0],
+                                clearable=False,
+                                persistence=True, persistence_type="session",
+                                style={"width": "100%"},
+                            ),
+                            html.Div(style={"height": 8}),
+                            html.Label("Log X", className="control-label"),
+                            dcc.Checklist(
+                                id="bs-logx-clim",
+                                options=[{"label": "Enable", "value": "on"}],
+                                value=[],  # unchecked by default
+                                inputClassName="checkbox-input",
+                                labelClassName="checkbox-label",
+                                persistence=True, persistence_type="session",
+                            ),
+                        ],
+                    ),
+                    dcc.Graph(
+                        id="bs-fig-climate",
+                        config={"displayModeBar": False, "responsive": False},
+                        style={"height": "520px", "width": "800px"},
+                    ),
+                ],
+            ),
+
+            # Panel B: Distribution (controls on the side)
+            html.Div(
+                className="viz-split",
+                children=[
+                    html.Div(
+                        className="panel",
+                        children=[
+                            html.H4("Distribution X", className="panel-title"),
+                            dcc.Dropdown(
+                                id="bs-x-dist",
+                                options=[{"label": c, "value": c} for c in DIST_X_CHOICES],
+                                value=DIST_X_CHOICES[0],
+                                clearable=False,
+                                persistence=True, persistence_type="session",
+                                style={"width": "100%"},
+                            ),
+                            html.Div(style={"height": 8}),
+                            html.Label("Log X", className="control-label"),
+                            dcc.Checklist(
+                                id="bs-logx-dist",
+                                options=[{"label": "Enable", "value": "on"}],
+                                value=[],  # unchecked by default
+                                inputClassName="checkbox-input",
+                                labelClassName="checkbox-label",
+                                persistence=True, persistence_type="session",
+                            ),
+                        ],
+                    ),
+                    dcc.Graph(
+                        id="bs-fig-dist",
+                        config={"displayModeBar": False, "responsive": False},
+                        style={"height": "520px", "width": "800px"},
+                    ),
+                ],
+            ),
+
             html.Div(id="bs-status", className="status-line"),
         ],
         className="page-container",

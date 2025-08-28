@@ -337,3 +337,28 @@ details[open] > summary {
 .filter-summary {
   padding: 10px 12px;  /* consistent with summary rule above */
 }
+
+/* ========= Biotype vs Environment layout ========= */
+.viz-split {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 12px;
+  align-items: start;
+  margin: 12px 0;
+}
+.panel {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: var(--shadow);
+}
+.panel-title {
+  margin: 2px 0 10px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text);
+}
+@media (max-width: 900px) {
+  .viz-split { grid-template-columns: 1fr; }
+}
