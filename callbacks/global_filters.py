@@ -1,21 +1,59 @@
-# callbacks/global_filters.py  — consolidated & page-persistent globals
-
 from __future__ import annotations
-from dash import Input, Output, State, callback, ctx, no_update
-import pyarrow.dataset as ds
-import pandas as pd
-from typing import Dict, Tuple
+
+from dash import Input, Output, State, callback, no_update, ctx
+
 from utils import config
-from utils.parquet_io import list_biotype_columns
+from utils.parquet_io import list_biotype_columns  # discovers *_percentage columns
 from utils.data_tools import (
-    list_taxonomy_options,
-    list_biogeo_levels, list_biogeo_values,
+    # Option builders
     list_taxonomy_options_cascaded,
+    list_biogeo_levels,
+    list_biogeo_values,
+    biotype_pct_columns,
+
+    # Global-filters helpers (you already added these)
+    gf_clean_list,
+    gf_build_taxonomy_map_from_values,
+    gf_build_climate_ranges,
+    gf_build_biogeo_ranges,
+    gf_build_biotype_pct,
+    gf_build_store,
 )
 
-# --- Init: populate options once on load (taxonomy full lists + biogeo) ---
-# IMPORTANT: do NOT wipe Biogeo value options on page nav — derive them from the store's selected levels.
+# ──────────────────────────────────────────────────────────────────────────────
+# A) Biogeography options
+# ──────────────────────────────────────────────────────────────────────────────
+
 @callback(
+    Output("filter-bio-level", "options"),
+    Input("url", "pathname"),
+    prevent_initial_call=False,
+)
+def init_biogeo_levels(_):
+    # Populate levels once on load/navigation
+    return list_biogeo_levels()
+
+@callback(
+    Output("filter-bio-value", "options"),
+    Output("filter-bio-value", "value"),
+    Input("filter-bio-level", "value"),
+    State("filter-bio-value", "value"),
+    prevent_initial_call=True,
+)
+def cascade_biogeo_values(levels, cur_values):
+    opts = list_biogeo_values(gf_clean_list(levels))
+    if not cur_values:
+        return opts, []
+    valid = {o["value"] for o in (opts or [])}
+    pruned = [v for v in (cur_values or []) if v in valid]
+    return opts, pruned
+
+# ──────────────────────────────────────────────────────────────────────────────
+# B) Taxonomy cascade (options + prune invalid values)
+# ──────────────────────────────────────────────────────────────────────────────
+
+@callback(
+    # Options (single cascade callback also handles first load)
     Output("filter-tax-kingdom", "options"),
     Output("filter-tax-phylum", "options"),
     Output("filter-tax-class", "options"),
@@ -24,43 +62,7 @@ from utils.data_tools import (
     Output("filter-tax-genus", "options"),
     Output("filter-tax-species", "options"),
     Output("filter-tax-id", "options"),
-    Output("filter-bio-level", "options"),
-    Output("filter-bio-value", "options"),
-    Input("url", "pathname"),
-    State("global-filters", "data"),
-    prevent_initial_call=False,
-)
-def init_filters(_pathname, store):
-    tax_opts = list_taxonomy_options()
-    levels_all = list_biogeo_levels()
-    # preserve current biogeo levels from store to compute value options on page change
-    selected_levels = (store or {}).get("bio_levels") or []
-    bio_value_options = list_biogeo_values(selected_levels) if selected_levels else []
-    return (
-        tax_opts.get("kingdom", []),
-        tax_opts.get("phylum", []),
-        tax_opts.get("class", []),
-        tax_opts.get("order", []),
-        tax_opts.get("family", []),
-        tax_opts.get("genus", []),
-        tax_opts.get("species", []),
-        tax_opts.get("tax_id", []),
-        levels_all,
-        bio_value_options,
-    )
-
-# --- Cascade: when ANY taxonomy rank changes, recompute lower-rank options and prune values ---
-@callback(
-    # options (allow duplicates to coexist with init)
-    Output("filter-tax-kingdom", "options", allow_duplicate=True),
-    Output("filter-tax-phylum", "options", allow_duplicate=True),
-    Output("filter-tax-class", "options", allow_duplicate=True),
-    Output("filter-tax-order", "options", allow_duplicate=True),
-    Output("filter-tax-family", "options", allow_duplicate=True),
-    Output("filter-tax-genus", "options", allow_duplicate=True),
-    Output("filter-tax-species", "options", allow_duplicate=True),
-    Output("filter-tax-id", "options", allow_duplicate=True),
-    # values (we prune invalid selections)
+    # Values (we prune invalids so UI stays consistent)
     Output("filter-tax-kingdom", "value"),
     Output("filter-tax-phylum", "value"),
     Output("filter-tax-class", "value"),
@@ -77,17 +79,24 @@ def init_filters(_pathname, store):
     Input("filter-tax-genus", "value"),
     Input("filter-tax-species", "value"),
     Input("filter-tax-id", "value"),
-    prevent_initial_call=True,
+    prevent_initial_call=False,
 )
 def cascade_taxonomy(k, p, c, o, f, g, s, taxid):
     selections = {
-        "kingdom": k or [], "phylum": p or [], "class": c or [], "order": o or [],
-        "family": f or [], "genus": g or [], "species": s or [], "tax_id": taxid or [],
+        "kingdom": gf_clean_list(k),
+        "phylum": gf_clean_list(p),
+        "class": gf_clean_list(c),
+        "order": gf_clean_list(o),
+        "family": gf_clean_list(f),
+        "genus": gf_clean_list(g),
+        "species": gf_clean_list(s),
+        "tax_id": gf_clean_list(taxid),
     }
     opts = list_taxonomy_options_cascaded(selections)
 
     def _prune(cur_vals, options):
-        if not cur_vals: return []
+        if not cur_vals:
+            return []
         valid = {o["value"] for o in (options or [])}
         return [v for v in cur_vals if v in valid]
 
@@ -103,21 +112,33 @@ def cascade_taxonomy(k, p, c, o, f, g, s, taxid):
     return (
         opts.get("kingdom", []), opts.get("phylum", []), opts.get("class", []), opts.get("order", []),
         opts.get("family", []),  opts.get("genus", []),  opts.get("species", []), opts.get("tax_id", []),
-        k2, p2, c2, o2, f2, g2, s2, t2,
+        k2, p2, c2, o2, f2, g2, s2, t2
     )
 
-# --- Biogeo values should refresh when levels change (keeps values UI in sync) ---
-@callback(
-    Output("filter-bio-value", "options", allow_duplicate=True),
-    Input("filter-bio-level", "value"),
-    prevent_initial_call=True,
-)
-def update_biogeo_values(levels_value):
-    return list_biogeo_values(levels_value or [])
+# ──────────────────────────────────────────────────────────────────────────────
+# C) Biotype % dropdown (values are base names, label=base)
+# ──────────────────────────────────────────────────────────────────────────────
 
-# --- Store global selections ---
 @callback(
-    Output("global-filters", "data"),
+    Output("bio-pct-biotype", "options"),
+    Input("url", "pathname"),
+    prevent_initial_call=False,
+)
+def init_biotype_pct_options(_):
+    cols = biotype_pct_columns()  # returns list like ["protein_coding_percentage", ...]
+    return [{"label": c.removesuffix(config.GENE_BIOTYPE_PCT_SUFFIX),
+             "value": c.removesuffix(config.GENE_BIOTYPE_PCT_SUFFIX)} for c in cols]
+
+# ──────────────────────────────────────────────────────────────────────────────
+# D) Sync everything → global store (single source of truth)
+#     - Ranges are only included when narrowed (full-span => omitted)
+#     - Biotype% stored as {"biotype": <base>, "min":..., "max":...}
+# ──────────────────────────────────────────────────────────────────────────────
+
+@callback(
+    Output("global-filters", "data", allow_duplicate=True),
+
+    # Taxonomy selections
     Input("filter-tax-kingdom", "value"),
     Input("filter-tax-phylum", "value"),
     Input("filter-tax-class", "value"),
@@ -126,276 +147,70 @@ def update_biogeo_values(levels_value):
     Input("filter-tax-genus", "value"),
     Input("filter-tax-species", "value"),
     Input("filter-tax-id", "value"),
+
+    # Climate categorical
+    Input("filter-climate", "value"),
+
+    # Biogeo categorical
     Input("filter-bio-level", "value"),
     Input("filter-bio-value", "value"),
-    State("global-filters", "data"),
-    prevent_initial_call=False,
-)
-def store_filters(k, p, c, o, f, g, s, taxid, levels, values, store):
-    taxonomy_map = {
-        "kingdom": k or [], "phylum": p or [], "class": c or [], "order": o or [],
-        "family": f or [], "genus": g or [], "species": s or [], "tax_id": taxid or [],
-    }
-    taxonomy_map = {rk: vs for rk, vs in taxonomy_map.items() if vs}
 
-    prev = dict(store or {})
-    # Preserve range filters & biotype% if they exist (global behavior)
-    climate_ranges = prev.get("climate_ranges") or {}
-    biogeo_ranges  = prev.get("biogeo_ranges") or {}
-    biopct         = prev.get("biotype_pct")   or None
-    climate_cats   = prev.get("climate")       or []
-
-    return {
-        "taxonomy_map": taxonomy_map,
-        "bio_levels": levels or [],
-        "bio_values": values or [],
-        "taxonomy": [],    # legacy
-        "climate": climate_cats,
-        "biotype_pct": biopct,
-        "climate_ranges": climate_ranges,   # <-- keep
-        "biogeo_ranges": biogeo_ranges,     # <-- keep
-    }
-
-# --- Reset taxonomy button (unchanged) ---
-@callback(
-    Output("filter-tax-kingdom", "value", allow_duplicate=True),
-    Output("filter-tax-phylum",  "value", allow_duplicate=True),
-    Output("filter-tax-class",   "value", allow_duplicate=True),
-    Output("filter-tax-order",   "value", allow_duplicate=True),
-    Output("filter-tax-family",  "value", allow_duplicate=True),
-    Output("filter-tax-genus",   "value", allow_duplicate=True),
-    Output("filter-tax-species", "value", allow_duplicate=True),
-    Output("filter-tax-id",      "value", allow_duplicate=True),
-    Input("btn-reset-taxonomy", "n_clicks"),
-    prevent_initial_call=True,
-)
-def reset_taxonomy(_n):
-    empty = []
-    return empty, empty, empty, empty, empty, empty, empty, empty
-
-# --- Biotype % dropdown options (from *_count cols) ---
-@callback(
-    Output("bio-pct-biotype", "options"),
-    Input("url", "pathname"),
-    prevent_initial_call=False,
-)
-def init_biotype_pct_options(_):
-    col_map = list_biotype_columns()
-    cnt = sorted(set(col_map.get("count", [])))
-    sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
-    names = [(c[:-len(sfx)] if c.endswith(sfx) else c) for c in cnt]
-    seen = set()
-    return [{"label": n, "value": n} for n in names if (n not in seen and not seen.add(n))]
-
-# --- Persist biotype% selection into the global store ---
-@callback(
-    Output("global-filters", "data", allow_duplicate=True),
-    Input("bio-pct-biotype", "value"),
-    Input("bio-pct-range", "value"),
-    State("global-filters", "data"),
-    prevent_initial_call=True,
-)
-def set_biotype_pct_in_store(biotype_name, pct_range, store):
-    store = store or {}
-    gf = dict(store)
-    if not biotype_name or not pct_range or pct_range == [0, 100]:
-        gf.pop("biotype_pct", None)
-        return gf
-    gf["biotype_pct"] = {"biotype": str(biotype_name), "min": float(pct_range[0]), "max": float(pct_range[1])}
-    return gf
-
-# --- Reset BIOGEO (levels + values + ranges) ---
-@callback(
-    Output("filter-bio-level", "value", allow_duplicate=True),
-    Output("filter-bio-value", "value", allow_duplicate=True),
-    Output("biogeo-range-range_km2", "value", allow_duplicate=True),
-    Output("global-filters", "data", allow_duplicate=True),
-    Input("btn-reset-biogeo", "n_clicks"),
-    State("biogeo-range-range_km2", "min"),
-    State("biogeo-range-range_km2", "max"),
-    State("global-filters", "data"),
-    prevent_initial_call=True,
-)
-def reset_biogeo(n_clicks, r_min, r_max, store):
-    if not n_clicks:
-        return no_update, no_update, no_update, no_update
-    gf = dict(store or {})
-    # Clear all biogeo bits
-    gf["bio_levels"] = []
-    gf["bio_values"] = []
-    gf.pop("biogeo_ranges", None)
-    # Snap slider back to full domain
-    return [], [], [r_min, r_max], gf
-
-# --- Reset BIOTYPE % (dropdown + slider) ---
-@callback(
-    Output("bio-pct-biotype", "value", allow_duplicate=True),
-    Output("bio-pct-range", "value", allow_duplicate=True),
-    Input("btn-reset-biotype", "n_clicks"),
-    prevent_initial_call=True,
-)
-def reset_biotype_pct(_n):
-    # Neutral: no biotype selected and full 0–100 range
-    # Our existing set_biotype_pct_in_store() will then drop 'biotype_pct' from the store.
-    return None, [0, 100]
-
-
-def _dataset(path):
-    try:
-        return ds.dataset(str(path))
-    except Exception:
-        return None
-
-def _min_max_for_columns(cols: list[str]) -> Dict[str, Tuple[float, float]]:
-    """
-    Read per-column min/max cheaply. For now: project each column and compute min/max in pandas.
-    (We can optimize with Arrow aggregations later if needed.)
-    """
-    dset = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
-    out: Dict[str, Tuple[float, float]] = {}
-    if not dset:
-        return out
-    for col in cols:
-        if col not in dset.schema.names:
-            continue
-        try:
-            tbl = dset.to_table(columns=[col])
-            s = pd.to_numeric(pd.Series(tbl.column(0).to_pandas()), errors="coerce")
-            s = s.dropna()
-            if s.empty:
-                continue
-            out[col] = (float(s.min()), float(s.max()))
-        except Exception:
-            # If anything goes wrong, skip this column
-            continue
-    return out
-
-# --- A) Initialize slider domains on first load ---
-@callback(
-    Output("climate-range-clim_bio1_mean", "min"),
-    Output("climate-range-clim_bio1_mean", "max"),
-    Output("climate-range-clim_bio1_mean", "value"),
-    Output("climate-range-clim_bio12_mean", "min"),
-    Output("climate-range-clim_bio12_mean", "max"),
-    Output("climate-range-clim_bio12_mean", "value"),
-    Output("biogeo-range-range_km2", "min"),
-    Output("biogeo-range-range_km2", "max"),
-    Output("biogeo-range-range_km2", "value"),
-    Input("url", "pathname"),
-    State("global-filters", "data"),
-    State("climate-range-clim_bio1_mean", "value"),
-    State("climate-range-clim_bio12_mean", "value"),
-    State("biogeo-range-range_km2", "value"),
-    prevent_initial_call=False,
-)
-def init_env_numeric_domains(_path, store, cur_b1, cur_b12, cur_rng):
-    cols = ["clim_bio1_mean", "clim_bio12_mean", "range_km2"]
-    mm = _min_max_for_columns(cols)
-
-    def pick_value(col_name: str, current, full_default):
-        gf = store or {}
-        # prefer store-narrowed range if present
-        if col_name in (gf.get("climate_ranges") or {}):
-            return list((gf["climate_ranges"][col_name]))
-        if col_name in (gf.get("biogeo_ranges") or {}):
-            return list((gf["biogeo_ranges"][col_name]))
-        # else keep current slider value if it looks valid
-        if current and isinstance(current, (list, tuple)) and len(current) == 2:
-            return list(current)
-        # else use full domain
-        return list(full_default)
-
-    # BIO1
-    b1_lo, b1_hi = mm.get("clim_bio1_mean", (0.0, 1.0))
-    if b1_lo == b1_hi: b1_hi = b1_lo + 1.0
-    b1_val = pick_value("clim_bio1_mean", cur_b1, (b1_lo, b1_hi))
-
-    # BIO12
-    b12_lo, b12_hi = mm.get("clim_bio12_mean", (0.0, 1.0))
-    if b12_lo == b12_hi: b12_hi = b12_lo + 1.0
-    b12_val = pick_value("clim_bio12_mean", cur_b12, (b12_lo, b12_hi))
-
-    # range_km2
-    r_lo, r_hi = mm.get("range_km2", (0.0, 1_000_000.0))
-    if r_lo == r_hi: r_hi = r_lo + 1.0
-    r_val = pick_value("range_km2", cur_rng, (r_lo, r_hi))
-
-    return b1_lo, b1_hi, b1_val, b12_lo, b12_hi, b12_val, r_lo, r_hi, r_val
-
-# --- B) Write narrowed ranges to global-filters store (keep store minimal) ---
-@callback(
-    Output("global-filters", "data", allow_duplicate=True),
+    # Climate numeric sliders (+min/max States for full-span detection)
     Input("climate-range-clim_bio1_mean", "value"),
-    Input("climate-range-clim_bio12_mean", "value"),
-    Input("biogeo-range-range_km2", "value"),
     State("climate-range-clim_bio1_mean", "min"),
     State("climate-range-clim_bio1_mean", "max"),
+
+    Input("climate-range-clim_bio12_mean", "value"),
     State("climate-range-clim_bio12_mean", "min"),
     State("climate-range-clim_bio12_mean", "max"),
+
+    # Distribution numeric slider
+    Input("biogeo-range-range_km2", "value"),
     State("biogeo-range-range_km2", "min"),
     State("biogeo-range-range_km2", "max"),
-    State("global-filters", "data"),
-    prevent_initial_call=True,   # already present
+
+    # Biotype %
+    Input("bio-pct-biotype", "value"),  # base biotype name (no suffix)
+    Input("bio-pct-range", "value"),
+
+    prevent_initial_call="initial_duplicate",
 )
-def persist_numeric_ranges(bio1_val, bio12_val, range_val,
-                           bio1_min, bio1_max, bio12_min, bio12_max, r_min, r_max,
-                           store):
-    # Guard: only respond to direct user moves, not first-load init
-    trg = ctx.triggered_id
-    if trg not in {"climate-range-clim_bio1_mean", "climate-range-clim_bio12_mean", "biogeo-range-range_km2"}:
-        return no_update
+def sync_global_store(
+    tax_kingdom, tax_phylum, tax_class, tax_order, tax_family, tax_genus, tax_species, tax_id,
+    climate_labels,
+    bio_levels, bio_values,
+    bio1_val, bio1_min, bio1_max,
+    bio12_val, bio12_min, bio12_max,
+    range_val, rmin, rmax,
+    biopct_biotype, biopct_range,
+):
+    ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+    values_by_rank = {
+        "kingdom": tax_kingdom, "phylum": tax_phylum, "class": tax_class, "order": tax_order,
+        "family": tax_family, "genus": tax_genus, "species": tax_species, "tax_id": tax_id,
+    }
+    taxonomy_map = gf_build_taxonomy_map_from_values(ranks, values_by_rank)
+    climate_ranges = gf_build_climate_ranges(bio1_val, bio1_min, bio1_max,
+                                             bio12_val, bio12_min, bio12_max)
+    biogeo_ranges  = gf_build_biogeo_ranges(range_val, rmin, rmax)
+    biotype_pct    = gf_build_biotype_pct(biopct_biotype, biopct_range)
 
-    gf = dict(store or {})
-    clim = dict(gf.get("climate_ranges") or {})
-    geo  = dict(gf.get("biogeo_ranges") or {})
+    store = gf_build_store(
+        taxonomy_map=taxonomy_map,
+        climate_labels=gf_clean_list(climate_labels),
+        bio_levels=gf_clean_list(bio_levels),
+        bio_values=gf_clean_list(bio_values),
+        climate_ranges=climate_ranges,
+        biogeo_ranges=biogeo_ranges,
+        biotype_pct=biotype_pct,
+    )
+    return store
 
-    def _set_or_remove(d: dict, key: str, val, full):
-        if not val:
-            d.pop(key, None); return
-        lo, hi = float(val[0]), float(val[1])
-        flo, fhi = float(full[0]), float(full[1])
-        # If equals full domain, remove (don’t apply)
-        if lo <= flo and hi >= fhi:
-            d.pop(key, None)
-        else:
-            d[key] = [lo, hi]
+# ──────────────────────────────────────────────────────────────────────────────
+# E) Reset buttons — set UI back to neutral; store is recomputed by D)
+# ──────────────────────────────────────────────────────────────────────────────
 
-    _set_or_remove(clim, "clim_bio1_mean",  bio1_val, (bio1_min, bio1_max))
-    _set_or_remove(clim, "clim_bio12_mean", bio12_val, (bio12_min, bio12_max))
-    _set_or_remove(geo,  "range_km2",       range_val, (r_min, r_max))
-
-    if clim: gf["climate_ranges"] = clim
-    else:    gf.pop("climate_ranges", None)
-    if geo:  gf["biogeo_ranges"] = geo
-    else:    gf.pop("biogeo_ranges", None)
-    return gf
-
-
-# --- Reset Climate: clear categorical + numeric, and reset slider values to full domain ---
 @callback(
-    Output("climate-range-clim_bio1_mean", "value", allow_duplicate=True),
-    Output("climate-range-clim_bio12_mean", "value", allow_duplicate=True),
-    Output("global-filters", "data", allow_duplicate=True),
-    Input("btn-reset-climate", "n_clicks"),
-    State("climate-range-clim_bio1_mean", "min"),
-    State("climate-range-clim_bio1_mean", "max"),
-    State("climate-range-clim_bio12_mean", "min"),
-    State("climate-range-clim_bio12_mean", "max"),
-    State("global-filters", "data"),
-    prevent_initial_call=True,
-)
-def reset_climate(n_clicks, b1_min, b1_max, b12_min, b12_max, store):
-    if not n_clicks:
-        return no_update, no_update, no_update
-    gf = dict(store or {})
-    gf.pop("climate_ranges", None)
-    gf["climate"] = []
-    return [b1_min, b1_max], [b12_min, b12_max], gf
-
-
-# --- Reset ALL filters in one click ---
-@callback(
-    # Taxonomy (all ranks)
     Output("filter-tax-kingdom", "value", allow_duplicate=True),
     Output("filter-tax-phylum", "value", allow_duplicate=True),
     Output("filter-tax-class", "value", allow_duplicate=True),
@@ -404,27 +219,80 @@ def reset_climate(n_clicks, b1_min, b1_max, b12_min, b12_max, store):
     Output("filter-tax-genus", "value", allow_duplicate=True),
     Output("filter-tax-species", "value", allow_duplicate=True),
     Output("filter-tax-id", "value", allow_duplicate=True),
+    Input("btn-reset-taxonomy", "n_clicks"),
+    prevent_initial_call=True,
+)
+def reset_taxonomy(n):
+    if not n:
+        return (no_update,) * 8
+    empty = []
+    return (empty, empty, empty, empty, empty, empty, empty, empty)
 
-    # Climate categorical + numeric ranges
+@callback(
     Output("filter-climate", "value", allow_duplicate=True),
     Output("climate-range-clim_bio1_mean", "value", allow_duplicate=True),
     Output("climate-range-clim_bio12_mean", "value", allow_duplicate=True),
+    Input("btn-reset-climate", "n_clicks"),
+    State("climate-range-clim_bio1_mean", "min"),
+    State("climate-range-clim_bio1_mean", "max"),
+    State("climate-range-clim_bio12_mean", "min"),
+    State("climate-range-clim_bio12_mean", "max"),
+    prevent_initial_call=True,
+)
+def reset_climate(n, b1_min, b1_max, b12_min, b12_max):
+    if not n:
+        return no_update, no_update, no_update
+    # Neutral: no labels, and sliders back to full domain (not filtering)
+    return [], [b1_min, b1_max], [b12_min, b12_max]
 
-    # Biogeography levels/values + range
+@callback(
     Output("filter-bio-level", "value", allow_duplicate=True),
     Output("filter-bio-value", "value", allow_duplicate=True),
     Output("biogeo-range-range_km2", "value", allow_duplicate=True),
+    Input("btn-reset-biogeo", "n_clicks"),
+    State("biogeo-range-range_km2", "min"),
+    State("biogeo-range-range_km2", "max"),
+    prevent_initial_call=True,
+)
+def reset_biogeo(n, rmin, rmax):
+    if not n:
+        return no_update, no_update, no_update
+    return [], [], [rmin, rmax]
 
-    # Biotype % filter
+@callback(
     Output("bio-pct-biotype", "value", allow_duplicate=True),
     Output("bio-pct-range", "value", allow_duplicate=True),
+    Input("btn-reset-biotype", "n_clicks"),
+    prevent_initial_call=True,
+)
+def reset_biotype_pct(n):
+    if not n:
+        return no_update, no_update
+    return None, [0, 100]
 
-    # Global store
-    Output("global-filters", "data", allow_duplicate=True),
-
+@callback(
+    # taxonomy
+    Output("filter-tax-kingdom", "value", allow_duplicate=True),
+    Output("filter-tax-phylum", "value", allow_duplicate=True),
+    Output("filter-tax-class", "value", allow_duplicate=True),
+    Output("filter-tax-order", "value", allow_duplicate=True),
+    Output("filter-tax-family", "value", allow_duplicate=True),
+    Output("filter-tax-genus", "value", allow_duplicate=True),
+    Output("filter-tax-species", "value", allow_duplicate=True),
+    Output("filter-tax-id", "value", allow_duplicate=True),
+    # climate + ranges
+    Output("filter-climate", "value", allow_duplicate=True),
+    Output("climate-range-clim_bio1_mean", "value", allow_duplicate=True),
+    Output("climate-range-clim_bio12_mean", "value", allow_duplicate=True),
+    # biogeo + range
+    Output("filter-bio-level", "value", allow_duplicate=True),
+    Output("filter-bio-value", "value", allow_duplicate=True),
+    Output("biogeo-range-range_km2", "value", allow_duplicate=True),
+    # biotype%
+    Output("bio-pct-biotype", "value", allow_duplicate=True),
+    Output("bio-pct-range", "value", allow_duplicate=True),
+    # store (recomputed by D when inputs change)
     Input("btn-reset-all-filters", "n_clicks"),
-
-    # States to snap sliders back to their full domains
     State("climate-range-clim_bio1_mean", "min"),
     State("climate-range-clim_bio1_mean", "max"),
     State("climate-range-clim_bio12_mean", "min"),
@@ -433,27 +301,15 @@ def reset_climate(n_clicks, b1_min, b1_max, b12_min, b12_max, store):
     State("biogeo-range-range_km2", "max"),
     prevent_initial_call=True,
 )
-def reset_all_filters(n_clicks, b1_min, b1_max, b12_min, b12_max, r_min, r_max):
-    if not n_clicks:
-        return (no_update,) * 17
-
-    # Empty selections for all dropdowns
+def reset_all(n, b1_min, b1_max, b12_min, b12_max, rk_min, rk_max):
+    if not n:
+        return (no_update,) * 16
     empty = []
-
-    # Snap numeric sliders to their full domain
-    bio1_val = [b1_min, b1_max] if b1_min is not None and b1_max is not None else no_update
-    bio12_val = [b12_min, b12_max] if b12_min is not None and b12_max is not None else no_update
-    range_val = [r_min, r_max] if r_min is not None and r_max is not None else no_update
-
-    # Clear store entirely (pages expect missing keys to be treated as "no filters")
-    store_clean = {}
-
     return (
-        empty, empty, empty, empty, empty, empty, empty, empty,   # taxonomy
-        empty,                                                    # climate categorical
-        bio1_val, bio12_val,                                      # climate ranges
-        empty, empty,                                             # biogeo level/value
-        range_val,                                                # biogeo range
-        None, [0, 100],                                           # biotype % filter
-        store_clean,                                              # store
+        empty, empty, empty, empty, empty, empty, empty, empty,  # taxonomy
+        empty,                                                   # climate labels
+        [b1_min, b1_max], [b12_min, b12_max],                   # climate ranges
+        empty, empty,                                            # biogeo level/value
+        [rk_min, rk_max],                                        # distribution range
+        None, [0, 100],                                          # biotype%
     )

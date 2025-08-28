@@ -2,51 +2,19 @@ from __future__ import annotations
 
 import pandas as pd
 from dash import Input, Output, State, callback, no_update
-from urllib.parse import urlparse
 
 from utils import config
 from utils.parquet_io import (
     list_columns,
     pick_default_columns,
     load_dashboard_page,
-    count_dashboard_rows,  # if you added the counter; otherwise remove these 3 lines
+    count_dashboard_rows,  # optional; handled in try/except below
 )
-
-def _to_markdown_link(v: str) -> str:
-    if v is None:
-        return ""
-    s = str(v).strip()
-    if not s:
-        return ""
-    # ensure scheme
-    href = s if s.lower().startswith(("http://", "https://")) else f"https://{s}"
-    # label = hostname (fallback to href)
-    try:
-        host = urlparse(href).hostname or href
-        label = host.replace("www.", "")
-    except Exception:
-        label = href
-    # Markdown link
-    return f"[{label}]({href})"
-
-def _make_column_defs(df: pd.DataFrame):
-    url_cols = set(getattr(config, "URL_COLUMNS", []))
-    defs = []
-    for col in df.columns:
-        c = {"headerName": col, "field": col}
-        if col in url_cols:
-            c.update({
-                "cellRenderer": "markdown",
-                "filter": "agTextColumnFilter",
-                "minWidth": 160
-            })
-        elif pd.api.types.is_numeric_dtype(df[col]):
-            c.update({"type": "rightAligned", "filter": "agNumberColumnFilter"})
-        else:
-            c.update({"filter": "agTextColumnFilter"})
-        defs.append(c)
-    return defs
-
+from utils.data_tools import (
+    resolve_preset_columns,
+    db_to_markdown_link,
+    db_make_column_defs,
+)
 
 # 1) Init: preset list + columns list (do NOT set db-columns.value here)
 @callback(
@@ -71,11 +39,12 @@ def init_presets_and_columns(_):
     col_opts = [{"label": c, "value": c} for c in all_cols]
     return preset_opts, default_preset, col_opts
 
+
 # 2) Apply preset -> sole writer to db-columns.value (runs on load and on change)
 @callback(
     Output("db-columns", "value"),
     Input("db-col-preset", "value"),
-    prevent_initial_call=False,  # run on first load
+    prevent_initial_call=False,
 )
 def apply_preset(preset_name):
     try:
@@ -83,10 +52,11 @@ def apply_preset(preset_name):
     except Exception:
         return []
     patterns = config.PRESET_COLUMN_GROUPS.get(preset_name or "", [])
-    resolved = [c for c in patterns if c in all_cols] or pick_default_columns(all_cols, max_cols=25)
+    resolved = resolve_preset_columns(all_cols, patterns) or pick_default_columns(all_cols, max_cols=25)
     return resolved
 
-# 3) Reset page to 1 on filter/column changes, but only if needed (avoids churn)
+
+# 3) Changing filters or columns resets page to 1 (keep UX predictable)
 @callback(
     Output("db-page", "value"),
     Input("global-filters", "data"),
@@ -96,6 +66,7 @@ def apply_preset(preset_name):
 )
 def reset_page_on_change(_filters, _cols, current_page):
     return 1 if (current_page or 1) != 1 else no_update
+
 
 # 4) Fetch a single page; include total count if available
 @callback(
@@ -109,16 +80,17 @@ def reset_page_on_change(_filters, _cols, current_page):
     prevent_initial_call=False,
 )
 def update_grid(global_filters, page_value, page_size, selected_columns):
-    taxonomy_map = (global_filters or {}).get("taxonomy_map") or {}
-    climate  = (global_filters or {}).get("climate") or []
-    levels   = (global_filters or {}).get("bio_levels") or []
-    values   = (global_filters or {}).get("bio_values") or []
-    bio_pct = (global_filters or {}).get("biotype_pct") or None
+    taxonomy_map   = (global_filters or {}).get("taxonomy_map") or {}
+    climate        = (global_filters or {}).get("climate") or []
+    levels         = (global_filters or {}).get("bio_levels") or []
+    values         = (global_filters or {}).get("bio_values") or []
+    bio_pct        = (global_filters or {}).get("biotype_pct") or None
     climate_ranges = (global_filters or {}).get("climate_ranges") or None
-    biogeo_ranges = (global_filters or {}).get("biogeo_ranges") or None
+    biogeo_ranges  = (global_filters or {}).get("biogeo_ranges") or None
     page = int(page_value or 1)
     size = int(page_size or 50)
 
+    # Columns to project
     try:
         all_cols = list_columns(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
     except Exception as e:
@@ -126,9 +98,11 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
 
     use_cols = [c for c in (selected_columns or []) if c in all_cols] or pick_default_columns(all_cols, max_cols=25)
 
+    # Place URL columns at the end (nicer reading order)
     url_set = set(getattr(config, "URL_COLUMNS", []) or [])
     display_cols = [c for c in use_cols if c not in url_set] + [c for c in use_cols if c in url_set]
 
+    # Load page
     try:
         df, returned_rows = load_dashboard_page(
             columns=display_cols,
@@ -145,15 +119,16 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
     except Exception as e:
         return no_update, no_update, f"Error loading data: {e}"
 
-    # Convert URL strings → Markdown links (clickable)
+    # Convert URL strings → Markdown links (clickable in the grid)
     url_cols = [c for c in display_cols if c in url_set and c in df.columns]
     for c in url_cols:
-        df[c] = df[c].map(_to_markdown_link)
+        df[c] = df[c].map(db_to_markdown_link)
 
-    # Reindex to the enforced order (just in case Arrow changed it)
+    # Reindex to enforced order (if Arrow changed it)
     df = df[[c for c in display_cols if c in df.columns]]
 
-    # Optional total count
+    # Optional global total count
+    total = None
     try:
         total = count_dashboard_rows(
             taxonomy_filter_map=taxonomy_map,
@@ -168,15 +143,15 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
         total = None
 
     status = f"Page {page} • size {size} • returned {returned_rows} rows • {len(df.columns)} columns"
-
     if total is not None:
         status += f" • total {total:,} rows"
     if bio_pct:
         status += f" • biotype%: {bio_pct['biotype']} {bio_pct['min']:.1f}–{bio_pct['max']:.1f}%"
 
-    return _make_column_defs(df), df.to_dict(orient="records"), status
+    return db_make_column_defs(df), df.to_dict(orient="records"), status
 
 
+# 5) Tiny badge showing how many columns are selected
 @callback(
     Output("db-columns-count", "children"),
     Input("db-columns", "value"),

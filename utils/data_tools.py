@@ -1,15 +1,56 @@
 from __future__ import annotations
+"""
+data_tools.py
+-------------
+Lightweight utilities used by callbacks. Keep helpers small, pure where possible,
+and grouped by the callback/page that uses them.
 
-from typing import Iterable, List, Dict, Sequence
+Sections:
+- Common option builders (taxonomy, climate, biogeo)
+- Taxonomy cascade helpers
+- Home KPIs helpers
+- Data Browser helpers
+- Biotype vs Environment helpers
+- Genome Annotations helpers
+"""
+from typing import Iterable, List, Dict, Sequence, Set
 from pathlib import Path
+import numpy as np
 import pandas as pd
-
-from utils import config
-from utils.parquet_io import distinct_values_for_column
-
 import pyarrow.dataset as ds
 
+from utils import config
+from utils.parquet_io import (
+    distinct_values_for_column,
+    list_biotype_columns,
+    _dataset as _io_dataset,
+    _build_filter_expr,
+    _build_range_expr,
+    _build_biotype_pct_pushdown,
+)
+import utils.parquet_io as parquet_io
+
+
+# ---------------------------------------------------------------------------
+# Internal: dataset loader
+# ---------------------------------------------------------------------------
+
+def _dataset(path: Path | str) -> ds.Dataset | None:
+    p = Path(path)
+    if not p.exists():
+        return None
+    return ds.dataset(str(p))
+
+
+# ---------------------------------------------------------------------------
+# Common option builders (taxonomy, climate, biogeo)
+# ---------------------------------------------------------------------------
+
 def resolve_preset_columns(all_columns: List[str], patterns: Iterable[str]) -> List[str]:
+    """
+    Given a list of columns and simple wildcard patterns (suffix '*'),
+    return columns in the order they appear in `all_columns`.
+    """
     pats = list(patterns or [])
     resolved: List[str] = []
     seen = set()
@@ -25,31 +66,43 @@ def resolve_preset_columns(all_columns: List[str], patterns: Iterable[str]) -> L
                 break
     return resolved
 
-def _dataset(path):
-    if not path.exists():
-        return None
-    return ds.dataset(str(path))
+
+def list_unique_values_for_column(column: str, limit: int = 5000) -> List[dict]:
+    dset = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
+    if not dset or column not in dset.schema.names:
+        return []
+    tbl = dset.to_table(columns=[column])
+    vals = pd.Series(tbl.column(0).to_pandas()).dropna().astype(str).unique().tolist()
+    vals = sorted(vals)[:limit]
+    return [{"label": v, "value": v} for v in vals]
+
+
+def list_taxonomy_options() -> Dict[str, List[dict]]:
+    out: Dict[str, List[dict]] = {}
+    for col in (config.TAXONOMY_RANK_COLUMNS or []):
+        out[col] = list_unique_values_for_column(col)
+    out["tax_id"] = list_unique_values_for_column("tax_id")
+    return out
+
 
 def get_filter_options() -> Dict[str, List[Dict[str, str]]]:
-    """taxonomy + climate from main parquet; empty lists if missing."""
     out: Dict[str, List[Dict[str, str]]] = {"taxonomy": [], "climate": []}
     main = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
     if not main:
         return out
 
-    # taxonomy
-    if config.TAXONOMY_COL in main.schema.names:
+    if config.TAXONOMY_COL and config.TAXONOMY_COL in main.schema.names:
         t = main.to_table(columns=[config.TAXONOMY_COL])
         vals = pd.Series(t.column(0).to_pandas()).dropna().astype(str).unique().tolist()
         out["taxonomy"] = [{"label": v, "value": v} for v in sorted(vals)[:5000]]
 
-    # climate
     if config.CLIMATE_LABEL_COL in main.schema.names:
         t = main.to_table(columns=[config.CLIMATE_LABEL_COL])
         vals = pd.Series(t.column(0).to_pandas()).dropna().astype(str).unique().tolist()
         out["climate"] = [{"label": v, "value": v} for v in sorted(vals)[:5000]]
 
     return out
+
 
 def list_biogeo_levels(limit: int = 200) -> List[Dict[str, str]]:
     dset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
@@ -58,6 +111,7 @@ def list_biogeo_levels(limit: int = 200) -> List[Dict[str, str]]:
     t = dset.to_table(columns=[config.BIOGEO_LEVEL_COL])
     vals = pd.Series(t.column(0).to_pandas()).dropna().astype(str).unique().tolist()
     return [{"label": v, "value": v} for v in sorted(vals)[:limit]]
+
 
 def list_biogeo_values(levels: List[str] | None, limit: int = 5000) -> List[Dict[str, str]]:
     dset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
@@ -70,121 +124,325 @@ def list_biogeo_values(levels: List[str] | None, limit: int = 5000) -> List[Dict
     vals = pd.Series(t.column(0).to_pandas()).dropna().astype(str).unique().tolist()
     return [{"label": v, "value": v} for v in sorted(vals)[:limit]]
 
-def _dataset(path: Path):
-    if not path.exists():
-        return None
-    return ds.dataset(str(path))
 
-def list_unique_values_for_column(column: str, limit: int = 5000) -> List[dict]:
-    dset = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
-    if not dset or column not in dset.schema.names:
-        return []
-    tbl = dset.to_table(columns=[column])
-    vals = pd.Series(tbl.column(0).to_pandas()).dropna().astype(str).unique().tolist()
-    vals = sorted(vals)[:limit]
-    return [{"label": v, "value": v} for v in vals]
+# ---------------------------------------------------------------------------
+# Taxonomy cascade helpers (used by global filters)
+# ---------------------------------------------------------------------------
 
-def list_taxonomy_options() -> Dict[str, List[dict]]:
-    out: Dict[str, List[dict]] = {}
-    for col in (config.TAXONOMY_RANK_COLUMNS or []):
-        out[col] = list_unique_values_for_column(col)
-    # tax_id can be large; include if present
-    if "tax_id" in (config.TAXONOMY_RANK_COLUMNS or []) or True:
-        out["tax_id"] = list_unique_values_for_column("tax_id")
-    return out
-
-#For taxonomy filter cascading
-def _dataset(path):
-    if not path.exists():
-        return None
-    return ds.dataset(str(path))
-
-
-def _coerce_for_column(dset: ds.Dataset, column: str, vals: Sequence) -> list:
-    """Coerce dropdown strings to the Arrow dtype of `column` (handles tax_id ints)."""
-    if not vals:
-        return []
-    try:
-        pa_type = dset.schema.field(column).type
-    except Exception:
-        pa_type = pa.string()
-    out = []
-    for v in vals:
-        if v is None:
-            continue
-        s = str(v).strip()
-        if s == "":
-            continue
-        try:
-            if pat.is_integer(pa_type):
-                out.append(int(float(s)))
-            elif pat.is_floating(pa_type):
-                out.append(float(s))
-            else:
-                out.append(s)
-        except Exception:
-            continue
-    return out
-
-
-# For cascading taxonomy filters
 def list_rank_values_with_filters(
     rank: str,
     higher_rank_selections: Dict[str, Sequence[str]] | None,
     limit: int = 5000,
 ) -> List[dict]:
-    """
-    Return distinct values for `rank`, filtered by the selections in higher ranks.
-    Example: rank='genus', higher_rank_selections={'family': ['Rosaceae']}
-    """
-    dset = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
-    if not dset or rank not in dset.schema.names:
-        return []
-
-    # Build AND filter from higher ranks
-    expr = None
-    for col, vals in (higher_rank_selections or {}).items():
-        if not vals or col not in dset.schema.names:
-            continue
-        coerced = _coerce_for_column(dset, col, vals)
-        if not coerced:
-            # Selection couldn't be coerced → no matches; return empty list now
-            return []
-        e = ds.field(col).isin(coerced)
-        expr = e if expr is None else (expr & e)
-
-    # Project only the target rank column, apply filter
-    table = dset.to_table(columns=[rank], filter=expr)
-    vals = (
-        pd.Series(table.column(0).to_pandas())
-        .dropna()
-        .astype(str)
-        .unique()
-        .tolist()
-    )
-    vals = sorted(vals)[:limit]
-    return [{"label": v, "value": v} for v in vals]
+    ranks_map = higher_rank_selections or {}
+    values = distinct_values_for_column(rank, taxonomy_filter_map=ranks_map)
+    values = sorted(values)[:limit]
+    return [{"label": v, "value": v} for v in values]
 
 
-def list_taxonomy_options_cascaded(
-    selections: Dict[str, Sequence[str]] | None,
-) -> Dict[str, List[dict]]:
-    """
-    For each rank in TAXONOMY_RANK_COLUMNS, list options filtered by all *higher* ranks.
-    Within a rank it's OR; across ranks it's AND (same as the grid).
-    """
+def list_taxonomy_options_cascaded(selections: Dict[str, Sequence[str]] | None) -> Dict[str, List[dict]]:
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
     sels = selections or {}
     out: Dict[str, List[dict]] = {}
 
-    # Left→right: build options for rank_i given ranks[:i] selections
     for i, rank in enumerate(ranks):
         higher_map = {r: sels.get(r, []) for r in ranks[:i] if sels.get(r)}
         values = distinct_values_for_column(rank, taxonomy_filter_map=higher_map)
         out[rank] = [{"label": v, "value": v} for v in values]
 
-    # tax_id: filter by *all* rank selections (if present)
     higher_all = {r: sels.get(r, []) for r in ranks if sels.get(r)}
     taxid_values = distinct_values_for_column("tax_id", taxonomy_filter_map=higher_all)
     out["tax_id"] = [{"label": str(v), "value": str(v)} for v in taxid_values]
     return out
+
+
+# ---------------------------------------------------------------------------
+# Global Filters helpers (used by callbacks/global_filters.py)
+# ---------------------------------------------------------------------------
+
+def gf_clean_list(v):
+    """Return a list of unique string values; tolerate None/str/singletons."""
+    if v is None:
+        return []
+    if isinstance(v, (str, int, float)):
+        v = [v]
+    try:
+        out = [str(x) for x in v if x not in (None, "", [])]
+    except Exception:
+        return []
+    # preserve order, dedupe
+    seen = set()
+    res = []
+    for x in out:
+        if x not in seen:
+            seen.add(x)
+            res.append(x)
+    return res
+
+def gf_is_full_span(val, vmin, vmax) -> bool:
+    """True if the slider value covers the entire domain (treat as 'no filter')."""
+    if val is None or vmin is None or vmax is None:
+        return True
+    try:
+        return len(val) == 2 and float(val[0]) <= float(vmin) and float(val[1]) >= float(vmax)
+    except Exception:
+        return True
+
+def gf_build_climate_ranges(b1_val, b1_min, b1_max, b12_val, b12_min, b12_max):
+    """Build climate_ranges dict or None if both sliders are full-span."""
+    out = {}
+    if not gf_is_full_span(b1_val, b1_min, b1_max):
+        out["clim_bio1_mean"] = [float(b1_val[0]), float(b1_val[1])]
+    if not gf_is_full_span(b12_val, b12_min, b12_max):
+        out["clim_bio12_mean"] = [float(b12_val[0]), float(b12_val[1])]
+    return out or None
+
+def gf_build_biogeo_ranges(range_val, rmin, rmax):
+    """Build biogeo_ranges dict or None if full-span."""
+    if gf_is_full_span(range_val, rmin, rmax):
+        return None
+    return {"range_km2": [float(range_val[0]), float(range_val[1])]}
+
+def gf_build_taxonomy_map_from_values(ranks: list[str], values_by_rank: dict) -> dict:
+    """Build taxonomy_map by rank; exclude empty selections."""
+    tmap = {}
+    for r in ranks:
+        vals = gf_clean_list(values_by_rank.get(r))
+        if vals:
+            tmap[r] = vals
+    return tmap
+
+def gf_build_biotype_pct(biotype: str | None, pct_range):
+    """Return {'biotype','min','max'} or None."""
+    if not biotype:
+        return None
+    try:
+        lo, hi = float(pct_range[0]), float(pct_range[1])
+    except Exception:
+        return None
+    return {"biotype": str(biotype), "min": lo, "max": hi}
+
+def gf_build_store(
+    taxonomy_map: dict,
+    climate_labels: list[str],
+    bio_levels: list[str],
+    bio_values: list[str],
+    climate_ranges: dict | None,
+    biogeo_ranges: dict | None,
+    biotype_pct: dict | None,
+) -> dict:
+    """Assemble the global store dict with only non-empty keys."""
+    store = {}
+    if taxonomy_map:
+        store["taxonomy_map"] = taxonomy_map
+    if climate_labels:
+        store["climate"] = gf_clean_list(climate_labels)
+    if bio_levels:
+        store["bio_levels"] = gf_clean_list(bio_levels)
+    if bio_values:
+        store["bio_values"] = gf_clean_list(bio_values)
+    if climate_ranges:
+        store["climate_ranges"] = climate_ranges
+    if biogeo_ranges:
+        store["biogeo_ranges"] = biogeo_ranges
+    if biotype_pct and biotype_pct.get("biotype"):
+        store["biotype_pct"] = biotype_pct
+    return store
+
+
+# ---------------------------------------------------------------------------
+# Home KPIs helpers (used by callbacks/home_kpis.py)
+# ---------------------------------------------------------------------------
+
+def kpi_format_int(n) -> str:
+    try:
+        return f"{int(n):,}"
+    except Exception:
+        return str(n)
+
+
+def kpi_filtered_accessions(
+    taxonomy_filter_map: Dict[str, Sequence[str]] | None,
+    climate_filter: Sequence[str] | None,
+    bio_levels_filter: Sequence[str] | None,
+    bio_values_filter: Sequence[str] | None,
+    biotype_pct_filter: Dict | None,
+    climate_ranges=None,
+    biogeo_ranges=None,
+) -> Set[str]:
+    main = _io_dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
+    if not main or not config.ACCESSION_COL_MAIN:
+        return set()
+
+    expr = _build_filter_expr(
+        dset=main,
+        taxonomy_filter=None,
+        taxonomy_filter_map=taxonomy_filter_map or {},
+        climate_filter=climate_filter or [],
+        accession_filter=None,
+    )
+
+    r1 = _build_range_expr(main, climate_ranges)
+    if r1 is not None:
+        expr = r1 if expr is None else (expr & r1)
+    r2 = _build_range_expr(main, biogeo_ranges)
+    if r2 is not None:
+        expr = r2 if expr is None else (expr & r2)
+
+    if bio_levels_filter or bio_values_filter:
+        bset = _io_dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
+        if bset:
+            filt = None
+            if bio_levels_filter:
+                filt = ds.field(config.BIOGEO_LEVEL_COL).isin([str(x) for x in bio_levels_filter])
+            if bio_values_filter:
+                f2 = ds.field(config.BIOGEO_VALUE_COL).isin([str(x) for x in bio_values_filter])
+                filt = f2 if filt is None else (filt & f2)
+            t = bset.to_table(columns=[config.ACCESSION_COL_BIOGEO], filter=filt)
+            accs = pd.Series(t.column(0).to_pandas()).dropna().astype(str).unique().tolist()
+            if accs:
+                e_acc = ds.field(config.ACCESSION_COL_MAIN).isin(accs)
+                expr = e_acc if expr is None else (expr & e_acc)
+
+    pct_expr, _ = _build_biotype_pct_pushdown(main, biotype_pct_filter)
+    if pct_expr is not None:
+        expr = pct_expr if expr is None else (expr & pct_expr)
+
+    tbl = main.to_table(columns=[config.ACCESSION_COL_MAIN], filter=expr)
+    return set(pd.Series(tbl.column(0).to_pandas()).dropna().astype(str).unique().tolist())
+
+
+def kpi_biogeo_distinct_counts(accessions: Set[str] | List[str]) -> tuple[int, int, int]:
+    if not accessions:
+        return (0, 0, 0)
+    bset = _io_dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
+    if not bset:
+        return (0, 0, 0)
+
+    acc_field = ds.field(config.ACCESSION_COL_BIOGEO).isin(list(accessions))
+
+    def _count(level_name: str) -> int:
+        filt = acc_field & (ds.field(config.BIOGEO_LEVEL_COL) == level_name)
+        tbl = bset.to_table(columns=[config.BIOGEO_VALUE_COL], filter=filt)
+        vals = pd.Series(tbl.column(0).to_pandas()).dropna().astype(str).unique()
+        return int(len(vals))
+
+    return _count("realm"), _count("biome"), _count("ecoregion")
+
+
+# ---------------------------------------------------------------------------
+# Data Browser helpers (used by callbacks/data_browser_callbacks.py)
+# ---------------------------------------------------------------------------
+
+def db_to_markdown_link(v: str) -> str:
+    """Render a URL (or bare host) as a Markdown link label=hostname."""
+    if v is None:
+        return ""
+    s = str(v).strip()
+    if not s:
+        return ""
+    href = s if s.lower().startswith(("http://", "https://")) else f"https://{s}"
+    try:
+        from urllib.parse import urlparse
+        host = urlparse(href).hostname or href
+        label = host.replace("www.", "")
+    except Exception:
+        label = href
+    return f"[{label}]({href})"
+
+
+def db_make_column_defs(df: pd.DataFrame) -> list[dict]:
+    """Build dash-ag-grid columnDefs with URL columns using markdown renderer."""
+    url_cols = set(getattr(config, "URL_COLUMNS", []) or [])
+    defs: list[dict] = []
+    for col in df.columns:
+        c = {"headerName": col, "field": col}
+        if col in url_cols:
+            c.update({
+                "cellRenderer": "markdown",
+                "filter": "agTextColumnFilter",
+                "minWidth": 160,
+            })
+        elif pd.api.types.is_numeric_dtype(df[col]):
+            c.update({"type": "rightAligned", "filter": "agNumberColumnFilter"})
+        else:
+            c.update({"filter": "agTextColumnFilter"})
+        defs.append(c)
+    return defs
+
+
+# ---------------------------------------------------------------------------
+# Biotype vs Environment helpers (used by callbacks/biotype_environment_callbacks.py)
+# ---------------------------------------------------------------------------
+
+def biotype_pct_columns() -> list[str]:
+    colmap = list_biotype_columns()
+    return list(colmap.get("pct", []))
+
+
+def pct_to_count(col_pct: str) -> str:
+    base = col_pct.removesuffix(config.GENE_BIOTYPE_PCT_SUFFIX)
+    return f"{config.GENE_BIOTYPE_PREFIX}{base}{config.GENE_BIOTYPE_COUNT_SUFFIX}"
+
+
+def sizes_from_total(total: pd.Series) -> np.ndarray:
+    t = pd.to_numeric(total, errors="coerce").to_numpy(dtype=float)
+    t[np.isinf(t)] = np.nan
+    if np.all(~np.isfinite(t)):
+        return np.full_like(t, 8.0, dtype=float)
+    finite = t[np.isfinite(t)]
+    if finite.size < 2:
+        return np.full_like(t, 8.0, dtype=float)
+    q_lo, q_hi = np.nanquantile(finite, [0.05, 0.95])
+    if not np.isfinite(q_lo) or not np.isfinite(q_hi) or q_hi <= q_lo:
+        q_lo, q_hi = np.nanmin(finite), np.nanmax(finite)
+        if not np.isfinite(q_hi) or q_hi <= q_lo:
+            return np.full_like(t, 8.0, dtype=float)
+    norm = np.clip((t - q_lo) / max(q_hi - q_lo, 1.0), 0.0, 1.0)
+    return 6.0 + 10.0 * np.sqrt(norm)  # 6–16 px
+
+
+def stable_sample(df: pd.DataFrame, n: int, key: str) -> pd.DataFrame:
+    if n <= 0 or len(df) <= n:
+        return df
+    rng = np.random.default_rng(abs(hash(key)) % (2**32))
+    idx = rng.choice(len(df), size=n, replace=False)
+    return df.iloc[np.sort(idx)]
+
+
+def get_accessions_for_biogeo(levels: list[str], values: list[str]) -> list[str]:
+    if not levels and not values:
+        return []
+    acc_set = parquet_io._get_accessions_for_biogeo(levels, values)
+    return sorted(list(acc_set))
+
+
+# ---------------------------------------------------------------------------
+# Genome Annotations helpers (used by callbacks/genome_annotations_callbacks.py)
+# ---------------------------------------------------------------------------
+
+def ga_next_rank(current: str | None) -> str | None:
+    ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+    if not current or current not in ranks:
+        return None
+    i = ranks.index(current)
+    return ranks[i + 1] if i + 1 < len(ranks) else None
+
+
+def ga_prev_rank(current: str | None) -> str | None:
+    ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+    if not current or current not in ranks:
+        return None
+    i = ranks.index(current)
+    return ranks[i - 1] if i - 1 >= 0 else None
+
+
+def ga_apply_drill_to_taxonomy_map(drill_path: list[dict], taxonomy_map: dict) -> dict:
+    tmap = {**(taxonomy_map or {})}
+    for step in drill_path or []:
+        r = step.get("rank"); v = step.get("value")
+        if r and v:
+            tmap.setdefault(r, [])
+            if v not in tmap[r]:
+                tmap[r] = list(tmap[r]) + [v]
+    return tmap

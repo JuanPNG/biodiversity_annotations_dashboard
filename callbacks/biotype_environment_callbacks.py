@@ -1,4 +1,3 @@
-# callbacks/biotype_environment_callbacks.py
 from __future__ import annotations
 
 from typing import List
@@ -10,49 +9,18 @@ import pyarrow.dataset as ds
 
 from utils import config
 from utils import parquet_io
+from utils.data_tools import (
+    biotype_pct_columns,
+    pct_to_count,
+    sizes_from_total,
+    stable_sample,
+    get_accessions_for_biogeo,
+)
 
 PCT_SUFFIX   = config.GENE_BIOTYPE_PCT_SUFFIX
 COUNT_SUFFIX = config.GENE_BIOTYPE_COUNT_SUFFIX
 TOTAL_COL    = config.TOTAL_GENES_COL
 EXCLUDE_SET  = set(config.GENE_BIOTYPE_EXCLUDE or ())
-
-
-def _discover_biotype_pct_columns() -> list[str]:
-    dataset = ds.dataset(str(config.DATA_DIR / config.DASHBOARD_MAIN_FN))
-    names = list(dataset.schema.names)
-    return [c for c in names if c.endswith(PCT_SUFFIX) and c not in EXCLUDE_SET]
-
-
-def _get_accessions_for_biogeo(levels: list[str], values: list[str]) -> list[str]:
-    if not levels and not values:
-        return []
-    dset = ds.dataset(str(config.DATA_DIR / config.BIOGEO_LONG_FN))
-    expr = None
-    if levels:
-        e = ds.field(config.BIOGEO_LEVEL_COL).isin(levels)
-        expr = e if expr is None else (expr & e)
-    if values:
-        e = ds.field(config.BIOGEO_VALUE_COL).isin(values)
-        expr = e if expr is None else (expr & e)
-    scanner = ds.Scanner.from_dataset(dset, columns=[config.ACCESSION_COL_BIOGEO], filter=expr, batch_size=8192)
-    batches = scanner.to_batches()
-    if not batches:
-        return []
-    sers = [rb.to_pandas()[config.ACCESSION_COL_BIOGEO] for rb in batches if rb.num_rows > 0]
-    if not sers:
-        return []
-    acc = pd.concat(sers, ignore_index=True)
-    if acc.empty:
-        return []
-    return sorted(pd.unique(acc.dropna().astype(str)).tolist())
-
-
-def _stable_sample(df: pd.DataFrame, n: int, key: str) -> pd.DataFrame:
-    if n <= 0 or len(df) <= n:
-        return df
-    rng = np.random.default_rng(abs(hash(key)) % (2**32))
-    idx = rng.choice(len(df), size=n, replace=False)
-    return df.iloc[np.sort(idx)]
 
 
 def _prepare_xy_for_fit(x: np.ndarray, y: np.ndarray, logx: bool, logy: bool) -> tuple[np.ndarray, np.ndarray]:
@@ -67,7 +35,6 @@ def _prepare_xy_for_fit(x: np.ndarray, y: np.ndarray, logx: bool, logy: bool) ->
     Y = np.log10(y[mask]) if logy else y[mask]
     return X, Y
 
-
 def _fit_line_and_curve(x: np.ndarray, y: np.ndarray, logx: bool, logy: bool) -> tuple[np.ndarray, np.ndarray] | None:
     X, Y = _prepare_xy_for_fit(x, y, logx, logy)
     if X.size < 2:
@@ -79,29 +46,6 @@ def _fit_line_and_curve(x: np.ndarray, y: np.ndarray, logx: bool, logy: bool) ->
     y_line = (10 ** ys) if logy else ys
     return x_line, y_line
 
-
-def _sizes_from_total(total: pd.Series) -> np.ndarray:
-    t = pd.to_numeric(total, errors="coerce").to_numpy(dtype=float)
-    t[np.isinf(t)] = np.nan
-    if np.all(~np.isfinite(t)):
-        return np.full_like(t, 8.0, dtype=float)
-    finite = t[np.isfinite(t)]
-    if finite.size < 2:
-        return np.full_like(t, 8.0, dtype=float)
-    q_lo, q_hi = np.nanquantile(finite, [0.05, 0.95])
-    if not np.isfinite(q_lo) or not np.isfinite(q_hi) or q_hi <= q_lo:
-        q_lo, q_hi = np.nanmin(finite), np.nanmax(finite)
-        if not np.isfinite(q_hi) or q_hi <= q_lo:
-            return np.full_like(t, 8.0, dtype=float)
-    norm = np.clip((t - q_lo) / max(q_hi - q_lo, 1.0), 0.0, 1.0)
-    return 6.0 + 10.0 * np.sqrt(norm)  # 6–16 px
-
-
-def _pct_to_count(col_pct: str) -> str:
-    base = col_pct.removesuffix(PCT_SUFFIX)
-    return f"{config.GENE_BIOTYPE_PREFIX}{base}{COUNT_SUFFIX}"
-
-
 def _read_filtered(columns: List[str], gf: dict) -> pd.DataFrame:
     dset = ds.dataset(str(config.DATA_DIR / config.DASHBOARD_MAIN_FN))
 
@@ -110,7 +54,7 @@ def _read_filtered(columns: List[str], gf: dict) -> pd.DataFrame:
     levels = (gf or {}).get("bio_levels") or []
     values = (gf or {}).get("bio_values") or []
 
-    accession_filter = _get_accessions_for_biogeo(levels, values)
+    accession_filter = get_accessions_for_biogeo(levels, values)
 
     expr = parquet_io._build_filter_expr(
         dset=dset,
@@ -141,7 +85,6 @@ def _read_filtered(columns: List[str], gf: dict) -> pd.DataFrame:
     if not frames:
         return pd.DataFrame(columns=columns)
     return pd.concat(frames, ignore_index=True)
-
 
 def _make_fig(
     df: pd.DataFrame,
@@ -187,7 +130,7 @@ def _make_fig(
 
         marker_kwargs = {}
         if show_total:
-            marker_kwargs["size"] = _sizes_from_total(sub[TOTAL_COL])
+            marker_kwargs["size"] = sizes_from_total(sub[TOTAL_COL])
 
         yvals = pd.to_numeric(sub[c], errors="coerce")
         fig.add_trace(go.Scattergl(
@@ -217,16 +160,16 @@ def _make_fig(
 
     fig.update_layout(
         template="plotly_dark",
-        margin=dict(l=10, r=10, t=60, b=70),  # more room for title + bottom legend
+        margin=dict(l=10, r=10, t=60, b=70),
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.18,  # place legend below the x-axis
+            y=-0.18,
             xanchor="left",
             x=0,
             tracegroupgap=8,
         ),
-        title=dict(text=title, x=0.01, y=0.98),  # visible, left-aligned
+        title=dict(text=title, x=0.01, y=0.98),
         height=520,
         autosize=False,
     )
@@ -242,7 +185,7 @@ def _make_fig(
     prevent_initial_call=False,
 )
 def init_biotypes(_):
-    cols = _discover_biotype_pct_columns()
+    cols = biotype_pct_columns()
     opts = [{"label": c.removesuffix(PCT_SUFFIX), "value": c} for c in cols]
     return opts, [o["value"] for o in opts[:4]]  # default up to 4 biotypes
 
@@ -274,15 +217,15 @@ def render_scatter(biotype_cols, y_metric, reg_flags, size_flags, point_cap,
 
     # Which Y values to read & label
     if y_metric == "percentage":
-        y_cols_to_project = biotype_cols[:]                      # *_percentage
+        y_cols_to_project = biotype_cols[:]  # *_percentage
         y_axis_title = "Gene biotype (%)"
         hover_suffix = "%"
     elif y_metric == "raw":
-        y_cols_to_project = [_pct_to_count(c) for c in biotype_cols]  # *_count
+        y_cols_to_project = [pct_to_count(c) for c in biotype_cols]  # *_count
         y_axis_title = "Gene biotype (count)"
         hover_suffix = ""
     else:  # per1k
-        y_cols_to_project = [_pct_to_count(c) for c in biotype_cols] + [TOTAL_COL]
+        y_cols_to_project = [pct_to_count(c) for c in biotype_cols] + [TOTAL_COL]
         y_axis_title = "Gene biotype (per 1k genes)"
         hover_suffix = " per 1k genes"
 
@@ -310,7 +253,7 @@ def render_scatter(biotype_cols, y_metric, reg_flags, size_flags, point_cap,
             return df_out, keep
 
         for c_pct in cols_pct:
-            c_cnt = _pct_to_count(c_pct)
+            c_cnt = pct_to_count(c_pct)
             if c_cnt not in df_out.columns:
                 continue
             if metric == "raw":
@@ -330,7 +273,7 @@ def render_scatter(biotype_cols, y_metric, reg_flags, size_flags, point_cap,
     cap = int(point_cap or 0)
     if cap > 0 and not df.empty:
         key = f"{sorted(biotype_cols)}|{x_clim}|{x_dist}|{gf.get('climate_ranges')}|{gf.get('biogeo_ranges')}|{y_metric}|{size_points}"
-        df = _stable_sample(df, cap, key)
+        df = stable_sample(df, cap, key)
 
     # Flags
     logx_clim = "on" in (logx_clim_val or [])
