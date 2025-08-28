@@ -1,3 +1,12 @@
+# callbacks/global_filters.py
+# -----------------------------------------------------------------------------
+# Global Filters: centralize reading/writing the dcc.Store(id="global-filters").
+# - Writes follow the store contract in utils/types.GlobalFilters
+# - Only include keys when narrowed / non-empty
+# - Use utils.data_tools.gf_* helpers to pack/prune data
+# - Keep callbacks thin; put pure logic in utils/data_tools.py
+# -----------------------------------------------------------------------------
+
 from __future__ import annotations
 
 from dash import Input, Output, State, callback, no_update, ctx
@@ -18,6 +27,13 @@ from utils.data_tools import (
     gf_build_biogeo_ranges,
     gf_build_biotype_pct,
     gf_build_store,
+)
+from utils.types import (
+    GlobalFilters,
+    TaxonomyMap,
+    ClimateRanges,
+    BiogeoRanges,
+    BiotypePctFilter
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
