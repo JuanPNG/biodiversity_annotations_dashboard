@@ -391,3 +391,69 @@ def reset_climate(n_clicks, b1_min, b1_max, b12_min, b12_max, store):
     gf.pop("climate_ranges", None)
     gf["climate"] = []
     return [b1_min, b1_max], [b12_min, b12_max], gf
+
+
+# --- Reset ALL filters in one click ---
+@callback(
+    # Taxonomy (all ranks)
+    Output("filter-tax-kingdom", "value", allow_duplicate=True),
+    Output("filter-tax-phylum", "value", allow_duplicate=True),
+    Output("filter-tax-class", "value", allow_duplicate=True),
+    Output("filter-tax-order", "value", allow_duplicate=True),
+    Output("filter-tax-family", "value", allow_duplicate=True),
+    Output("filter-tax-genus", "value", allow_duplicate=True),
+    Output("filter-tax-species", "value", allow_duplicate=True),
+    Output("filter-tax-id", "value", allow_duplicate=True),
+
+    # Climate categorical + numeric ranges
+    Output("filter-climate", "value", allow_duplicate=True),
+    Output("climate-range-clim_bio1_mean", "value", allow_duplicate=True),
+    Output("climate-range-clim_bio12_mean", "value", allow_duplicate=True),
+
+    # Biogeography levels/values + range
+    Output("filter-bio-level", "value", allow_duplicate=True),
+    Output("filter-bio-value", "value", allow_duplicate=True),
+    Output("biogeo-range-range_km2", "value", allow_duplicate=True),
+
+    # Biotype % filter
+    Output("bio-pct-biotype", "value", allow_duplicate=True),
+    Output("bio-pct-range", "value", allow_duplicate=True),
+
+    # Global store
+    Output("global-filters", "data", allow_duplicate=True),
+
+    Input("btn-reset-all-filters", "n_clicks"),
+
+    # States to snap sliders back to their full domains
+    State("climate-range-clim_bio1_mean", "min"),
+    State("climate-range-clim_bio1_mean", "max"),
+    State("climate-range-clim_bio12_mean", "min"),
+    State("climate-range-clim_bio12_mean", "max"),
+    State("biogeo-range-range_km2", "min"),
+    State("biogeo-range-range_km2", "max"),
+    prevent_initial_call=True,
+)
+def reset_all_filters(n_clicks, b1_min, b1_max, b12_min, b12_max, r_min, r_max):
+    if not n_clicks:
+        return (no_update,) * 17
+
+    # Empty selections for all dropdowns
+    empty = []
+
+    # Snap numeric sliders to their full domain
+    bio1_val = [b1_min, b1_max] if b1_min is not None and b1_max is not None else no_update
+    bio12_val = [b12_min, b12_max] if b12_min is not None and b12_max is not None else no_update
+    range_val = [r_min, r_max] if r_min is not None and r_max is not None else no_update
+
+    # Clear store entirely (pages expect missing keys to be treated as "no filters")
+    store_clean = {}
+
+    return (
+        empty, empty, empty, empty, empty, empty, empty, empty,   # taxonomy
+        empty,                                                    # climate categorical
+        bio1_val, bio12_val,                                      # climate ranges
+        empty, empty,                                             # biogeo level/value
+        range_val,                                                # biogeo range
+        None, [0, 100],                                           # biotype % filter
+        store_clean,                                              # store
+    )
