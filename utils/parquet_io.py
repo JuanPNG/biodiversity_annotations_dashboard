@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence, Set, Tuple
 
@@ -8,6 +9,7 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.types as pat
 import pyarrow.dataset as ds
+
 
 from utils import config
 
@@ -949,3 +951,50 @@ def summarize_biotype_totals(
 
     return pd.DataFrame(rows).sort_values("count", ascending=False).reset_index(drop=True)
 
+
+@lru_cache(maxsize=32)
+def _get_column_min_max_cached(cols_key: tuple[str, ...]) -> dict[str, tuple[float, float]]:
+    """
+    Internal: scan the Parquet once for the requested columns and return {col: (min, max)}.
+    Cached by the exact tuple of column names.
+    """
+    import pyarrow.compute as pc
+
+    main_path = config.DATA_DIR / config.DASHBOARD_MAIN_FN
+    dset = ds.dataset(main_path)
+
+    result: dict[str, tuple[float, float]] = {}
+    for col in cols_key:
+        if col not in dset.schema.names:
+            result[col] = (None, None)  # caller will fallback
+            continue
+
+        gmin: float | None = None
+        gmax: float | None = None
+
+        scanner = ds.Scanner.from_dataset(dset, columns=[col], batch_size=65536)
+        for batch in scanner.to_batches():
+            arr = batch.column(0)
+            mm = pc.min_max(arr).as_py()  # {'min': x, 'max': y} or Nones
+            bmin, bmax = mm.get("min"), mm.get("max")
+            if bmin is None or bmax is None:
+                continue
+            vmin = float(bmin)
+            vmax = float(bmax)
+            gmin = vmin if gmin is None else min(gmin, vmin)
+            gmax = vmax if gmax is None else max(gmax, vmax)
+
+        result[col] = (gmin, gmax)
+
+    return result
+
+
+def get_column_min_max(columns: list[str]) -> dict[str, tuple[float, float]]:
+    """
+    Public helper: return {col: (min, max)} for the requested numeric columns.
+    Falls back to (None, None) per column if the dataset/column is missing.
+    Results are cached per unique set of columns.
+    """
+    # normalize to a stable cache key (order matters only for caching)
+    key = tuple(columns)
+    return _get_column_min_max_cached(key)
