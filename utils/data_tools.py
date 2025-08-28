@@ -1,3 +1,4 @@
+# utils/data_tools.py
 from __future__ import annotations
 """
 data_tools.py
@@ -13,7 +14,8 @@ Sections:
 - Biotype vs Environment helpers
 - Genome Annotations helpers
 """
-from typing import Iterable, List, Dict, Sequence, Set
+from functools import lru_cache
+from typing import Iterable, Mapping, Sequence, Optional, Tuple, Dict, List, Set
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -27,6 +29,15 @@ from utils.parquet_io import (
     _build_filter_expr,
     _build_range_expr,
     _build_biotype_pct_pushdown,
+)
+from utils.types import (
+    GlobalFilters,
+    TaxRank,
+    TaxonomyMap,
+    RangeTuple,
+    ClimateRanges,
+    BiogeoRanges,
+    BiotypePctFilter,
 )
 import utils.parquet_io as parquet_io
 
@@ -161,7 +172,12 @@ def list_taxonomy_options_cascaded(selections: Dict[str, Sequence[str]] | None) 
 # ---------------------------------------------------------------------------
 
 def gf_clean_list(v):
-    """Return a list of unique string values; tolerate None/str/singletons."""
+    """
+    Normalize a user-supplied list by:
+      - removing None/empty/whitespace-only entries
+      - stripping whitespace from each remaining string
+    Returns a new list; input is not mutated.
+    """
     if v is None:
         return []
     if isinstance(v, (str, int, float)):
@@ -179,32 +195,73 @@ def gf_clean_list(v):
             res.append(x)
     return res
 
-def gf_is_full_span(val, vmin, vmax) -> bool:
-    """True if the slider value covers the entire domain (treat as 'no filter')."""
-    if val is None or vmin is None or vmax is None:
-        return True
+
+def gf_is_full_span(lo: float, hi: float, span_lo: float, span_hi: float, tol: float = 0.0) -> bool:
+    """
+    Strict full-span check.
+    Returns True iff [lo, hi] equals [span_lo, span_hi] within absolute tolerance `tol`.
+    Any narrowing (lo > span_lo or hi < span_hi) returns False.
+
+    Examples (tol=0):
+      (0, 100)  vs (0, 100)  -> True
+      (0, 99.9) vs (0, 100)  -> False
+      (10, 90)  vs (0, 100)  -> False
+    """
     try:
-        return len(val) == 2 and float(val[0]) <= float(vmin) and float(val[1]) >= float(vmax)
+        lo_f, hi_f = float(lo), float(hi)
+        s_lo, s_hi = float(span_lo), float(span_hi)
     except Exception:
-        return True
+        return False
+    return (abs(lo_f - s_lo) <= tol) and (abs(hi_f - s_hi) <= tol)
+
 
 def gf_build_climate_ranges(b1_val, b1_min, b1_max, b12_val, b12_min, b12_max):
-    """Build climate_ranges dict or None if both sliders are full-span."""
-    out = {}
-    if not gf_is_full_span(b1_val, b1_min, b1_max):
-        out["clim_bio1_mean"] = [float(b1_val[0]), float(b1_val[1])]
-    if not gf_is_full_span(b12_val, b12_min, b12_max):
-        out["clim_bio12_mean"] = [float(b12_val[0]), float(b12_val[1])]
-    return out or None
+    """
+    Return only narrowed climate ranges as {col: (lo, hi)}.
+    Full-span means “no filter” (omit the key).
+    """
+    out: dict[str, tuple[float, float]] = {}
+
+    # Annual Mean Temperature
+    try:
+        b1_lo, b1_hi = float(b1_val[0]), float(b1_val[1])
+        if not gf_is_full_span(b1_lo, b1_hi, float(b1_min), float(b1_max)):
+            out["clim_bio1_mean"] = (b1_lo, b1_hi)
+    except Exception:
+        pass  # ignore malformed inputs
+
+    # Annual Precipitation
+    try:
+        b12_lo, b12_hi = float(b12_val[0]), float(b12_val[1])
+        if not gf_is_full_span(b12_lo, b12_hi, float(b12_min), float(b12_max)):
+            out["clim_bio12_mean"] = (b12_lo, b12_hi)
+    except Exception:
+        pass
+
+    return out
+
 
 def gf_build_biogeo_ranges(range_val, rmin, rmax):
-    """Build biogeo_ranges dict or None if full-span."""
-    if gf_is_full_span(range_val, rmin, rmax):
-        return None
-    return {"range_km2": [float(range_val[0]), float(range_val[1])]}
+    """
+    Return only narrowed biogeographic numeric ranges as {col: (lo, hi)}.
+    Full-span means “no filter” (omit the key).
+    """
+    out: dict[str, tuple[float, float]] = {}
+    try:
+        lo, hi = float(range_val[0]), float(range_val[1])
+        if not gf_is_full_span(lo, hi, float(rmin), float(rmax)):
+            out["range_km2"] = (lo, hi)
+    except Exception:
+        pass
+    return out
 
 def gf_build_taxonomy_map_from_values(ranks: list[str], values_by_rank: dict) -> dict:
-    """Build taxonomy_map by rank; exclude empty selections."""
+    """
+    Build a compact TaxonomyMap from a rank->list mapping by:
+      - dropping ranks whose list is empty
+      - preserving the order of incoming lists
+    Returns a dict keyed by TaxRank with non-empty string lists.
+    """
     tmap = {}
     for r in ranks:
         vals = gf_clean_list(values_by_rank.get(r))
@@ -213,14 +270,18 @@ def gf_build_taxonomy_map_from_values(ranks: list[str], values_by_rank: dict) ->
     return tmap
 
 def gf_build_biotype_pct(biotype: str | None, pct_range):
-    """Return {'biotype','min','max'} or None."""
+    """Return {'biotype','min','max'} only when range is narrowed; else None."""
     if not biotype:
         return None
     try:
         lo, hi = float(pct_range[0]), float(pct_range[1])
     except Exception:
         return None
+    # Full span (0..100) means “no filter” -> omit from store
+    if lo <= 0.0 and hi >= 100.0:
+        return None
     return {"biotype": str(biotype), "min": lo, "max": hi}
+
 
 def gf_build_store(
     taxonomy_map: dict,
@@ -231,7 +292,11 @@ def gf_build_store(
     biogeo_ranges: dict | None,
     biotype_pct: dict | None,
 ) -> dict:
-    """Assemble the global store dict with only non-empty keys."""
+    """
+    Pack the global filters store (GlobalFilters). Only include keys that are
+    non-empty / narrowed, per the store contract. Inputs may be None/empty;
+    outputs never contain empty keys.
+    """
     store = {}
     if taxonomy_map:
         store["taxonomy_map"] = taxonomy_map
@@ -375,6 +440,7 @@ def db_make_column_defs(df: pd.DataFrame) -> list[dict]:
 # Biotype vs Environment helpers (used by callbacks/biotype_environment_callbacks.py)
 # ---------------------------------------------------------------------------
 
+@lru_cache(maxsize=1)
 def biotype_pct_columns() -> list[str]:
     colmap = list_biotype_columns()
     return list(colmap.get("pct", []))
