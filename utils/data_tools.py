@@ -34,7 +34,6 @@ from utils.types import (
     GlobalFilters,
     TaxRank,
     TaxonomyMap,
-    RangeTuple,
     ClimateRanges,
     BiogeoRanges,
     BiotypePctFilter,
@@ -92,7 +91,7 @@ def list_unique_values_for_column(column: str, limit: int = 5000) -> List[dict]:
 
 
 @lru_cache(maxsize=1)
-def list_taxonomy_options() -> Dict[str, List[dict]]:
+def list_taxonomy_options() -> dict[str, list[dict]]:
     out: dict[str, list[dict]] = {}
     for col in (config.TAXONOMY_RANK_COLUMNS or []):
         out[col] = list_unique_values_for_column(col)
@@ -100,8 +99,8 @@ def list_taxonomy_options() -> Dict[str, List[dict]]:
     return out
 
 
-def get_filter_options() -> Dict[str, List[Dict[str, str]]]:
-    out: Dict[str, List[Dict[str, str]]] = {"taxonomy": [], "climate": []}
+def get_filter_options() -> dict[str, list[dict[str, str]]]:
+    out: dict[str, list[dict[str, str]]] = {"taxonomy": [], "climate": []}
     main = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
     if not main:
         return out
@@ -119,7 +118,7 @@ def get_filter_options() -> Dict[str, List[Dict[str, str]]]:
     return out
 
 
-def list_biogeo_levels(limit: int = 200) -> List[Dict[str, str]]:
+def list_biogeo_levels(limit: int = 200) -> list[dict[str, str]]:
     dset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
     if not dset or config.BIOGEO_LEVEL_COL not in dset.schema.names:
         return []
@@ -129,7 +128,7 @@ def list_biogeo_levels(limit: int = 200) -> List[Dict[str, str]]:
 
 
 def list_biogeo_values(
-        levels: List[str] | None,
+        levels: list[str] | None,
         limit: int = 5000
 ) -> List[Dict[str, str]]:
     dset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
@@ -149,7 +148,7 @@ def list_biogeo_values(
 
 def list_rank_values_with_filters(
     rank: str,
-    higher_rank_selections: Dict[str, Sequence[str]] | None,
+    higher_rank_selections: dict[str, Sequence[str]] | None,
     limit: int = 5000,
 ) -> List[dict]:
     ranks_map = higher_rank_selections or {}
@@ -159,12 +158,11 @@ def list_rank_values_with_filters(
 
 
 def list_taxonomy_options_cascaded(
-        selections: Dict[str,
-        Sequence[str]] | None
-) -> Dict[str, List[dict]]:
+        selections: dict[str, Sequence[str]] | None
+) -> dict[str, list[dict]]:
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
     sels = selections or {}
-    out: Dict[str, List[dict]] = {}
+    out: dict[str, list[dict]] = {}
 
     for i, rank in enumerate(ranks):
         higher_map = {r: sels.get(r, []) for r in ranks[:i] if sels.get(r)}
@@ -181,7 +179,7 @@ def list_taxonomy_options_cascaded(
 # Global Filters helpers (used by callbacks/global_filters.py)
 # ---------------------------------------------------------------------------
 
-def gf_clean_list(v: Sequence[Optional[str]] | None) -> List[str]:
+def gf_clean_list(v: Sequence[str | None]) -> list[str]:
     """
     Normalize a user-supplied list by:
       - removing None/empty/whitespace-only entries
@@ -278,7 +276,7 @@ def gf_build_biogeo_ranges(
 
 def gf_build_taxonomy_map_from_values(
         ranks: Sequence[TaxRank] | Sequence[str],
-        values_by_rank: Mapping[TaxRank, Sequence[str]] | Dict[str, Sequence[str]]
+        values_by_rank: Mapping[TaxRank, Sequence[str]] | Mapping[str, Sequence[str]]
 ) -> TaxonomyMap:
     """
     Build a compact TaxonomyMap from a rank->list mapping by:
@@ -293,7 +291,10 @@ def gf_build_taxonomy_map_from_values(
             tmap[r] = vals
     return tmap
 
-def gf_build_biotype_pct(biotype: str | None, pct_range) -> Optional[BiotypePctFilter]:
+def gf_build_biotype_pct(
+        biotype: str | None,
+        pct_range: Sequence[float] | None
+) -> BiotypePctFilter:
     """Return {'biotype','min','max'} only when range is narrowed; else None."""
     if not biotype:
         return None
@@ -308,20 +309,20 @@ def gf_build_biotype_pct(biotype: str | None, pct_range) -> Optional[BiotypePctF
 
 
 def gf_build_store(
-    taxonomy_map: Optional[TaxonomyMap] = None,
-    climate_labels: Optional[Sequence[str]] = None,
-    bio_levels: Optional[Sequence[str]] = None,
-    bio_values: Optional[Sequence[str]] = None,
-    climate_ranges: Optional[ClimateRanges] = None,
-    biogeo_ranges: Optional[BiogeoRanges] = None,
-    biotype_pct: Optional[BiotypePctFilter] = None,
+    taxonomy_map: TaxonomyMap | None = None,
+    climate_labels: Sequence[str] | None = None,
+    bio_levels: Sequence[str] | None = None,
+    bio_values: Sequence[str] | None = None,
+    climate_ranges: ClimateRanges | None = None,
+    biogeo_ranges: BiogeoRanges | None = None,
+    biotype_pct: BiotypePctFilter | None = None,
 ) -> GlobalFilters:
     """
     Pack the global filters store (GlobalFilters). Only include keys that are
     non-empty / narrowed, per the store contract. Inputs may be None/empty;
     outputs never contain empty keys.
     """
-    store = {}
+    store: GlobalFilters = {}
     if taxonomy_map:
         store["taxonomy_map"] = taxonomy_map
     if climate_labels:
@@ -351,11 +352,11 @@ def kpi_format_int(n) -> str:
 
 
 def kpi_filtered_accessions(
-    taxonomy_filter_map: Dict[str, Sequence[str]] | None,
+    taxonomy_filter_map: dict[str, Sequence[str]] | None,
     climate_filter: Sequence[str] | None,
     bio_levels_filter: Sequence[str] | None,
     bio_values_filter: Sequence[str] | None,
-    biotype_pct_filter: Dict | None,
+    biotype_pct_filter: dict | None,
     climate_ranges=None,
     biogeo_ranges=None,
 ) -> Set[str]:
