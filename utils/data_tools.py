@@ -527,15 +527,62 @@ def ga_prev_rank(current: str | None) -> str | None:
     return ranks[i - 1] if i - 1 >= 0 else None
 
 
-def ga_apply_drill_to_taxonomy_map(drill_path: list[dict], taxonomy_map: dict) -> dict:
-    tmap = {**(taxonomy_map or {})}
-    for step in drill_path or []:
-        r = step.get("rank"); v = step.get("value")
-        if r and v:
-            tmap.setdefault(r, [])
-            if v not in tmap[r]:
-                tmap[r] = list(tmap[r])  [v]
+def ga_apply_drill_to_taxonomy_map(
+    drill_path: list[dict] | None,
+    taxonomy_map: TaxonomyMap | None,
+) -> TaxonomyMap:
+    """
+    Merge a list of drill steps (from bar clicks) into a TaxonomyMap.
+
+    Each step is expected to look like: {"rank": <rank>, "value": <value>}.
+
+    Rules
+    -----
+    - Only apply steps for known taxonomy ranks (config.TAXONOMY_RANK_COLUMNS, plus 'tax_id').
+    - Ignore empty/None/whitespace values.
+    - Avoid duplicates; preserve insertion order for values at a given rank.
+    - Seed from the incoming taxonomy_map (if any), but only keep known ranks.
+
+    Returns
+    -------
+    TaxonomyMap: {rank: [values], ...} with non-empty lists.
+    """
+    # Allowed ranks: configured ranks + 'tax_id' (if used in your UI).
+    allowed_ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+    if "tax_id" not in allowed_ranks:
+        allowed_ranks.append("tax_id")
+
+    # Start from the existing map, but only keep allowed ranks and clean values.
+    tmap: TaxonomyMap = {}
+    src = taxonomy_map or {}
+    for r in allowed_ranks:
+        vals = src.get(r)
+        if vals:
+            cleaned = [str(x).strip() for x in vals if x not in (None, "")]
+            if cleaned:
+                tmap[r] = cleaned
+
+    # Apply drill steps safely.
+    for step in (drill_path or []):
+        r = step.get("rank")
+        v = step.get("value")
+
+        if not r or r not in allowed_ranks:
+            continue
+        if v is None:
+            continue
+
+        v_str = str(v).strip()
+        if not v_str:
+            continue
+
+        existing = list(tmap.get(r, []))
+        if v_str not in existing:
+            existing.append(v_str)
+            tmap[r] = existing
+
     return tmap
+
 
 
 # Explicit public API (import surfaces used across callbacks/pages)
