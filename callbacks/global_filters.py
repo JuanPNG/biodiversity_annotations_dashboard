@@ -21,6 +21,8 @@
 
 from __future__ import annotations
 
+from typing import Optional
+
 from dash import Input, Output, State, callback, no_update
 
 from utils import config
@@ -209,7 +211,7 @@ def sync_global_store(
     bio12_val, bio12_min, bio12_max,
     range_val, rmin, rmax,
     biopct_biotype, biopct_range,
-):
+) -> GlobalFilters:
     """Build and return the global filters store.
 
     Reads all UI controls (taxonomy cascade, climate labels, climate ranges,
@@ -229,11 +231,11 @@ def sync_global_store(
         "kingdom": tax_kingdom, "phylum": tax_phylum, "class": tax_class, "order": tax_order,
         "family": tax_family, "genus": tax_genus, "species": tax_species, "tax_id": tax_id,
     }
-    taxonomy_map = gf_build_taxonomy_map_from_values(ranks, values_by_rank)
-    climate_ranges = gf_build_climate_ranges(bio1_val, bio1_min, bio1_max,
+    taxonomy_map: TaxonomyMap = gf_build_taxonomy_map_from_values(ranks, values_by_rank)
+    climate_ranges: ClimateRanges = gf_build_climate_ranges(bio1_val, bio1_min, bio1_max,
                                              bio12_val, bio12_min, bio12_max)
-    biogeo_ranges  = gf_build_biogeo_ranges(range_val, rmin, rmax)
-    biotype_pct    = gf_build_biotype_pct(biopct_biotype, biopct_range)
+    biogeo_ranges: BiogeoRanges  = gf_build_biogeo_ranges(range_val, rmin, rmax)
+    biotype_pct: BiotypePctFilter | None = gf_build_biotype_pct(biopct_biotype, biopct_range)
 
     store = gf_build_store(
         taxonomy_map=taxonomy_map,
