@@ -185,3 +185,25 @@ def test_gf_build_store_keys_and_omissions():
     assert store2["taxonomy_map"]["genus"] == ["Panthera"]
     assert store2.get("climate") == ["Tropical"]
     assert store2["biotype_pct"]["min"] == 5.0 and store2["biotype_pct"]["max"] == 25.0
+
+def test_gf_build_climate_ranges_malformed_inputs_are_noop():
+    # None / empty / bad inputs should not crash and should yield {}
+    assert gf_build_climate_ranges(None, 0, 100, [0, 100], 0, 100) == {}
+    assert gf_build_climate_ranges([0, 100], 0, 100, None, 0, 100) == {}
+    assert gf_build_climate_ranges([], 0, 100, [0, 100], 0, 100) == {}
+    assert gf_build_climate_ranges(["a", "b"], 0, 100, [0, 100], 0, 100) == {}
+    # full-span on both -> {}
+    assert gf_build_climate_ranges([0, 100], 0, 100, [0, 5000], 0, 5000) == {}
+    # one narrowed -> only that key
+    out = gf_build_climate_ranges([10, 90], 0, 100, [0, 5000], 0, 5000)
+    assert out == {"clim_bio1_mean": (10.0, 90.0)}
+
+def test_gf_build_biogeo_ranges_malformed_inputs_are_noop():
+    assert gf_build_biogeo_ranges(None, 0, 1_000_000) == {}
+    assert gf_build_biogeo_ranges([], 0, 1_000_000) == {}
+    assert gf_build_biogeo_ranges(["x", "y"], 0, 1_000_000) == {}
+    # full-span -> {}
+    assert gf_build_biogeo_ranges([0, 1_000_000], 0, 1_000_000) == {}
+    # narrowed
+    out = gf_build_biogeo_ranges([10_000, 250_000], 0, 1_000_000)
+    assert out == {"range_km2": (10000.0, 250000.0)}
