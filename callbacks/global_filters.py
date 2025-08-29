@@ -1,18 +1,29 @@
 # callbacks/global_filters.py
 # -----------------------------------------------------------------------------
-# Global Filters: centralize reading/writing the dcc.Store(id="global-filters").
-# - Writes follow the store contract in utils/types.GlobalFilters
-# - Only include keys when narrowed / non-empty
-# - Use utils.data_tools.gf_* helpers to pack/prune data
-# - Keep callbacks thin; put pure logic in utils/data_tools.py
+# Global Filters (single source of truth for cross-page state)
+#
+# Store contract (keys present only when non-empty/narrowed):
+# {
+#   "taxonomy_map": {rank: [values], ...},     # ranks = config.TAXONOMY_RANK_COLUMNS + 'tax_id'
+#   "climate": [labels],                       # note: param is climate_labels -> store key "climate"
+#   "bio_levels": [levels],
+#   "bio_values": [values],
+#   "climate_ranges": {"clim_bio1_mean": (lo, hi), "clim_bio12_mean": (lo, hi)},
+#   "biogeo_ranges": {"range_km2": (lo, hi)},
+#   "biotype_pct": {"biotype": "<base>", "min": float, "max": float}
+# }
+#
+# Rules:
+# - Full-span sliders = “no filter” ⇒ omit their keys entirely.
+# - Sliders’ min/max are data-driven (initialized in navbar).
+# - Keep callbacks thin; pack/prune via utils.data_tools.gf_* helpers.
 # -----------------------------------------------------------------------------
 
 from __future__ import annotations
 
-from dash import Input, Output, State, callback, no_update, ctx
+from dash import Input, Output, State, callback, no_update
 
 from utils import config
-from utils.parquet_io import list_biotype_columns  # discovers *_percentage columns
 from utils.data_tools import (
     # Option builders
     list_taxonomy_options_cascaded,
@@ -20,7 +31,7 @@ from utils.data_tools import (
     list_biogeo_values,
     biotype_pct_columns,
 
-    # Global-filters helpers (you already added these)
+    # Global-filters helpers
     gf_clean_list,
     gf_build_taxonomy_map_from_values,
     gf_build_climate_ranges,
@@ -150,7 +161,6 @@ def init_biotype_pct_options(_):
 #     - Ranges are only included when narrowed (full-span => omitted)
 #     - Biotype% stored as {"biotype": <base>, "min":..., "max":...}
 # ──────────────────────────────────────────────────────────────────────────────
-
 @callback(
     Output("global-filters", "data", allow_duplicate=True),
 
@@ -186,7 +196,7 @@ def init_biotype_pct_options(_):
     State("biogeo-range-range_km2", "max"),
 
     # Biotype %
-    Input("bio-pct-biotype", "value"),  # base biotype name (no suffix)
+    Input("bio-pct-biotype", "value"),
     Input("bio-pct-range", "value"),
 
     prevent_initial_call="initial_duplicate",
@@ -200,6 +210,20 @@ def sync_global_store(
     range_val, rmin, rmax,
     biopct_biotype, biopct_range,
 ):
+    """Build and return the global filters store.
+
+    Reads all UI controls (taxonomy cascade, climate labels, climate ranges,
+    biogeography level/value + range_km2, biotype %) and returns a dict that
+    matches utils.types.GlobalFilters.
+
+    Notes
+    -----
+    - Only include keys when they are non-empty or narrowed.
+    - Full-span sliders mean “no filter” and are omitted from the store.
+    - The parameter name `climate_labels` is persisted under store key "climate".
+    """
+
+
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
     values_by_rank = {
         "kingdom": tax_kingdom, "phylum": tax_phylum, "class": tax_class, "order": tax_order,
