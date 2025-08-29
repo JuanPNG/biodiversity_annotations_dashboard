@@ -57,7 +57,10 @@ def _dataset(path: Path | str) -> ds.Dataset | None:
 # Common option builders (taxonomy, climate, biogeo)
 # ---------------------------------------------------------------------------
 
-def resolve_preset_columns(all_columns: List[str], patterns: Iterable[str]) -> List[str]:
+def resolve_preset_columns(
+        all_columns: List[str],
+        patterns: Iterable[str]
+) -> List[str]:
     """
     Given a list of columns and simple wildcard patterns (suffix '*'),
     return columns in the order they appear in `all_columns`.
@@ -124,7 +127,10 @@ def list_biogeo_levels(limit: int = 200) -> List[Dict[str, str]]:
     return [{"label": v, "value": v} for v in sorted(vals)[:limit]]
 
 
-def list_biogeo_values(levels: List[str] | None, limit: int = 5000) -> List[Dict[str, str]]:
+def list_biogeo_values(
+        levels: List[str] | None,
+        limit: int = 5000
+) -> List[Dict[str, str]]:
     dset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
     if not dset or config.BIOGEO_VALUE_COL not in dset.schema.names:
         return []
@@ -151,7 +157,10 @@ def list_rank_values_with_filters(
     return [{"label": v, "value": v} for v in values]
 
 
-def list_taxonomy_options_cascaded(selections: Dict[str, Sequence[str]] | None) -> Dict[str, List[dict]]:
+def list_taxonomy_options_cascaded(
+        selections: Dict[str,
+        Sequence[str]] | None
+) -> Dict[str, List[dict]]:
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
     sels = selections or {}
     out: Dict[str, List[dict]] = {}
@@ -215,7 +224,14 @@ def gf_is_full_span(lo: float, hi: float, span_lo: float, span_hi: float, tol: f
     return (abs(lo_f - s_lo) <= tol) and (abs(hi_f - s_hi) <= tol)
 
 
-def gf_build_climate_ranges(b1_val, b1_min, b1_max, b12_val, b12_min, b12_max):
+def gf_build_climate_ranges(
+        b1_val: Sequence[float] | None,
+        b1_min: float | None,
+        b1_max: float | None,
+        b12_val: Sequence[float] | None,
+        b12_min: float | None,
+        b12_max: float | None
+) -> Dict[str, Tuple[float, float]]:
     """
     Return only narrowed climate ranges as {col: (lo, hi)}.
     Full-span means “no filter” (omit the key).
@@ -241,7 +257,11 @@ def gf_build_climate_ranges(b1_val, b1_min, b1_max, b12_val, b12_min, b12_max):
     return out
 
 
-def gf_build_biogeo_ranges(range_val, rmin, rmax):
+def gf_build_biogeo_ranges(
+        range_val: Sequence[float] | None,
+        rmin: float | None,
+        rmax: float | None
+) -> Dict[str, Tuple[float, float]]:
     """
     Return only narrowed biogeographic numeric ranges as {col: (lo, hi)}.
     Full-span means “no filter” (omit the key).
@@ -255,7 +275,10 @@ def gf_build_biogeo_ranges(range_val, rmin, rmax):
         pass
     return out
 
-def gf_build_taxonomy_map_from_values(ranks: list[str], values_by_rank: dict) -> dict:
+def gf_build_taxonomy_map_from_values(
+        ranks: list[str],
+        values_by_rank: dict
+) -> dict:
     """
     Build a compact TaxonomyMap from a rank->list mapping by:
       - dropping ranks whose list is empty
