@@ -6,8 +6,6 @@
 # Keep functions pure/deterministic; avoid side effects and keep caching tight.
 # -----------------------------------------------------------------------------
 
-from __future__ import annotations
-
 from functools import lru_cache
 from pathlib import Path
 from typing import Any, Sequence
