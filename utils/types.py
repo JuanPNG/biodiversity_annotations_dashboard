@@ -1,7 +1,7 @@
 # utils/types.py
 from __future__ import annotations
 
-from typing import Dict, List, Literal, NotRequired, Tuple, TypedDict
+from typing import Literal, TypedDict
 
 
 # ---- Taxonomy types ---------------------------------------------------------
@@ -12,15 +12,15 @@ TaxRank = Literal[
 ]
 
 # Map of rank -> selected values (non-empty lists only make it into the store).
-TaxonomyMap = Dict[TaxRank, List[str]]
+TaxonomyMap = dict[TaxRank, list[str]]
 
 
 # ---- Range types (numeric sliders) -----------------------------------------
 
 # Generic "column -> (lo, hi)" range mapping. We use it for climate + biogeo.
-RangeTuple = Tuple[float, float]
-ClimateRanges = Dict[str, RangeTuple]
-BiogeoRanges = Dict[str, RangeTuple]
+RangeTuple = tuple[float, float]
+ClimateRanges = dict[str, RangeTuple]
+BiogeoRanges = dict[str, RangeTuple]
 
 
 # ---- Biotype% filter --------------------------------------------------------
@@ -54,9 +54,9 @@ class GlobalFilters(TypedDict, total=False):
     }
     """
     taxonomy_map: TaxonomyMap
-    climate: List[str]
-    bio_levels: List[str]
-    bio_values: List[str]
+    climate: list[str]
+    bio_levels: list[str]
+    bio_values: list[str]
     climate_ranges: ClimateRanges
     biogeo_ranges: BiogeoRanges
     biotype_pct: BiotypePctFilter
