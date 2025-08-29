@@ -1009,3 +1009,18 @@ def get_column_min_max(columns: List[str]) -> Dict[str, Tuple[float | None, floa
     # normalize to a stable cache key (order matters only for caching)
     key = tuple(columns)
     return _get_column_min_max_cached(key)
+
+# Explicit public API for parquet I/O helpers (wildcard imports, docs, etc.)
+__all__ = [
+    "list_columns",
+    "pick_default_columns",
+    "get_biogeo_tags_for_accessions_by_level",
+    "list_biotype_columns",
+    "summarize_biotypes",
+    "load_dashboard_page",
+    "count_dashboard_rows",
+    "distinct_values_for_column",
+    "summarize_biotypes_by_rank",
+    "summarize_biotype_totals",
+    "get_column_min_max",
+]
