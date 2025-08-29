@@ -1,21 +1,20 @@
 # utils/data_tools.py
-from __future__ import annotations
-"""
-data_tools.py
--------------
-Lightweight utilities used by callbacks. Keep helpers small, pure where possible,
-and grouped by the callback/page that uses them.
+# -----------------------------------------------------------------------------
+# Lightweight utilities used by callbacks. Keep helpers small, pure where possible,
+# and grouped by the callback/page that uses them.
+#
+# Sections:
+# - Common option builders (taxonomy, climate, biogeo)
+# - Taxonomy cascade helpers
+# - Home KPIs helpers
+# - Data Browser helpers
+# - Biotype vs Environment helpers
+# - Genome Annotations helpers
+# -----------------------------------------------------------------------------
 
-Sections:
-- Common option builders (taxonomy, climate, biogeo)
-- Taxonomy cascade helpers
-- Home KPIs helpers
-- Data Browser helpers
-- Biotype vs Environment helpers
-- Genome Annotations helpers
-"""
+from __future__ import annotations
 from functools import lru_cache
-from typing import Iterable, Mapping, Sequence, Optional, Tuple, Dict, List, Set
+from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -92,7 +91,7 @@ def list_unique_values_for_column(column: str, limit: int = 5000) -> List[dict]:
 
 
 def list_taxonomy_options() -> Dict[str, List[dict]]:
-    out: Dict[str, List[dict]] = {}
+    out: dict[str, list[dict]] = {}
     for col in (config.TAXONOMY_RANK_COLUMNS or []):
         out[col] = list_unique_values_for_column(col)
     out["tax_id"] = list_unique_values_for_column("tax_id")
@@ -180,7 +179,7 @@ def list_taxonomy_options_cascaded(
 # Global Filters helpers (used by callbacks/global_filters.py)
 # ---------------------------------------------------------------------------
 
-def gf_clean_list(v):
+def gf_clean_list(v: Sequence[Optional[str]] | None) -> List[str]:
     """
     Normalize a user-supplied list by:
       - removing None/empty/whitespace-only entries
@@ -231,12 +230,12 @@ def gf_build_climate_ranges(
         b12_val: Sequence[float] | None,
         b12_min: float | None,
         b12_max: float | None
-) -> Dict[str, Tuple[float, float]]:
+) -> ClimateRanges:
     """
     Return only narrowed climate ranges as {col: (lo, hi)}.
     Full-span means “no filter” (omit the key).
     """
-    out: dict[str, tuple[float, float]] = {}
+    out: ClimateRanges = {}
 
     # Annual Mean Temperature
     try:
@@ -261,12 +260,12 @@ def gf_build_biogeo_ranges(
         range_val: Sequence[float] | None,
         rmin: float | None,
         rmax: float | None
-) -> Dict[str, Tuple[float, float]]:
+) -> BiogeoRanges:
     """
     Return only narrowed biogeographic numeric ranges as {col: (lo, hi)}.
     Full-span means “no filter” (omit the key).
     """
-    out: dict[str, tuple[float, float]] = {}
+    out: BiogeoRanges = {}
     try:
         lo, hi = float(range_val[0]), float(range_val[1])
         if not gf_is_full_span(lo, hi, float(rmin), float(rmax)):
@@ -276,9 +275,9 @@ def gf_build_biogeo_ranges(
     return out
 
 def gf_build_taxonomy_map_from_values(
-        ranks: list[str],
-        values_by_rank: dict
-) -> dict:
+        ranks: Sequence[TaxRank] | Sequence[str],
+        values_by_rank: Mapping[TaxRank, Sequence[str]] | Dict[str, Sequence[str]]
+) -> TaxonomyMap:
     """
     Build a compact TaxonomyMap from a rank->list mapping by:
       - dropping ranks whose list is empty
@@ -292,7 +291,7 @@ def gf_build_taxonomy_map_from_values(
             tmap[r] = vals
     return tmap
 
-def gf_build_biotype_pct(biotype: str | None, pct_range):
+def gf_build_biotype_pct(biotype: str | None, pct_range) -> Optional[BiotypePctFilter]:
     """Return {'biotype','min','max'} only when range is narrowed; else None."""
     if not biotype:
         return None
@@ -307,14 +306,14 @@ def gf_build_biotype_pct(biotype: str | None, pct_range):
 
 
 def gf_build_store(
-    taxonomy_map: dict,
-    climate_labels: list[str],
-    bio_levels: list[str],
-    bio_values: list[str],
-    climate_ranges: dict | None,
-    biogeo_ranges: dict | None,
-    biotype_pct: dict | None,
-) -> dict:
+    taxonomy_map: Optional[TaxonomyMap] = None,
+    climate_labels: Optional[Sequence[str]] = None,
+    bio_levels: Optional[Sequence[str]] = None,
+    bio_values: Optional[Sequence[str]] = None,
+    climate_ranges: Optional[ClimateRanges] = None,
+    biogeo_ranges: Optional[BiogeoRanges] = None,
+    biotype_pct: Optional[BiotypePctFilter] = None,
+) -> GlobalFilters:
     """
     Pack the global filters store (GlobalFilters). Only include keys that are
     non-empty / narrowed, per the store contract. Inputs may be None/empty;

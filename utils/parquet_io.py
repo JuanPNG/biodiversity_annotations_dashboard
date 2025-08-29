@@ -1,8 +1,16 @@
+# -----------------------------------------------------------------------------
+# Centralized Arrow/Parquet I/O helpers for the dashboard.
+# - Column/domain discovery
+# - Min/max extents for sliders (climate, range_km2)
+# - Biotype column lists (pct/count)
+# Keep functions pure/deterministic; avoid side effects and keep caching tight.
+# -----------------------------------------------------------------------------
+
 from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 import pandas as pd
@@ -60,13 +68,16 @@ def get_biogeo_tags_for_accessions_by_level(accessions: Sequence[str], levels: S
         out[acc] = slot
     return out
 
+# Light simple alias for filter expressions.
+DatasetExpr = Any
+
 def _build_filter_expr(
     dset: ds.Dataset,
     taxonomy_filter: Optional[Sequence[str]],
     climate_filter: Optional[Sequence[str]],
     accession_filter: Optional[Sequence[str]],
     taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
-):
+) -> DatasetExpr | None:
     """
     Combine equality filters into a single dataset expression (AND).
     Supports multi-rank taxonomy via taxonomy_filter_map.
@@ -134,7 +145,7 @@ def _build_range_expr(dset: ds.Dataset, ranges: Optional[dict]) -> Optional[ds.E
         expr = e if expr is None else (expr & e)
     return expr
 
-def list_biotype_columns() -> dict[str, list[str]]:
+def list_biotype_columns() -> Dict[str, List[str]]:
     """
     Return {'pct': [...], 'count': [...]} from dashboard_main based on *_percentage and *_count.
     Excludes items in config.GENE_BIOTYPE_EXCLUDE.
@@ -953,7 +964,7 @@ def summarize_biotype_totals(
 
 
 @lru_cache(maxsize=32)
-def _get_column_min_max_cached(cols_key: tuple[str, ...]) -> dict[str, tuple[float, float]]:
+def _get_column_min_max_cached(cols_key: tuple[str, ...]) -> Dict[str, Tuple[float | None, float | None]]:
     """
     Internal: scan the Parquet once for the requested columns and return {col: (min, max)}.
     Cached by the exact tuple of column names.
@@ -989,7 +1000,7 @@ def _get_column_min_max_cached(cols_key: tuple[str, ...]) -> dict[str, tuple[flo
     return result
 
 
-def get_column_min_max(columns: list[str]) -> dict[str, tuple[float, float]]:
+def get_column_min_max(columns: List[str]) -> Dict[str, Tuple[float | None, float | None]]:
     """
     Public helper: return {col: (min, max)} for the requested numeric columns.
     Falls back to (None, None) per column if the dataset/column is missing.
