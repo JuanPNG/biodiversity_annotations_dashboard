@@ -8,7 +8,7 @@
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Sequence, Mapping
 from utils import config
 
 import numpy as np
@@ -72,7 +72,7 @@ def _build_filter_expr(
     taxonomy_filter: Sequence[str] | None,
     climate_filter: Sequence[str] | None,
     accession_filter: Sequence[str] | None,
-    taxonomy_filter_map: dict[str, Sequence[str]] | None = None,
+    taxonomy_filter_map: Mapping[str, Sequence[str]] | None = None,
 ) -> DatasetExpr | None:
     """
     Combine equality filters into a single dataset expression (AND).
