@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Sequence
+from utils import config
 
 import numpy as np
 import pandas as pd
@@ -18,22 +19,22 @@ import pyarrow as pa
 import pyarrow.types as pat
 import pyarrow.dataset as ds
 
-
-from utils import config
+# Light simple alias for filter expressions.
+DatasetExpr = Any
 
 def _dataset(path: Path) -> ds.Dataset:
     if not path.exists():
         raise FileNotFoundError(f"Parquet file not found: {path}")
     return ds.dataset(str(path))
 
-def list_columns(path: Path) -> List[str]:
+def list_columns(path: Path) -> list[str]:
     dset = _dataset(path)
     return list(dset.schema.names)
 
-def pick_default_columns(all_cols: Sequence[str], max_cols: int = 25) -> List[str]:
+def pick_default_columns(all_cols: Sequence[str], max_cols: int = 25) -> list[str]:
     return list(all_cols[:max_cols])
 
-def _get_accessions_for_biogeo(levels: Sequence[str] | None, values: Sequence[str] | None) -> Set[str]:
+def _get_accessions_for_biogeo(levels: Sequence[str] | None, values: Sequence[str] | None) -> set[str]:
     if not levels and not values:
         return set()
     bset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
@@ -47,7 +48,7 @@ def _get_accessions_for_biogeo(levels: Sequence[str] | None, values: Sequence[st
     s = pd.Series(table.column(0).to_pandas()).dropna().astype(str)
     return set(s.unique())
 
-def get_biogeo_tags_for_accessions_by_level(accessions: Sequence[str], levels: Sequence[str]) -> Dict[str, Dict[str, List[str]]]:
+def get_biogeo_tags_for_accessions_by_level(accessions: Sequence[str], levels: Sequence[str]) -> dict[str, dict[str, list[str]]]:
     if not accessions or not levels:
         return {}
     bset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
@@ -59,24 +60,21 @@ def get_biogeo_tags_for_accessions_by_level(accessions: Sequence[str], levels: S
     if pdf.empty:
         return {}
     pdf[config.ACCESSION_COL_BIOGEO] = pdf[config.ACCESSION_COL_BIOGEO].astype(str)
-    out: Dict[str, Dict[str, List[str]]] = {}
+    out: dict[str, dict[str, list[str]]] = {}
     for acc, g_acc in pdf.groupby(config.ACCESSION_COL_BIOGEO):
-        slot: Dict[str, List[str]] = {}
+        slot: dict[str, list[str]] = {}
         for lvl, g_lvl in g_acc.groupby(config.BIOGEO_LEVEL_COL):
             vals = g_lvl[config.BIOGEO_VALUE_COL].dropna().astype(str).unique().tolist()
             slot[str(lvl)] = sorted(vals)
         out[acc] = slot
     return out
 
-# Light simple alias for filter expressions.
-DatasetExpr = Any
-
 def _build_filter_expr(
     dset: ds.Dataset,
-    taxonomy_filter: Optional[Sequence[str]],
-    climate_filter: Optional[Sequence[str]],
-    accession_filter: Optional[Sequence[str]],
-    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
+    taxonomy_filter: Sequence[str] | None,
+    climate_filter: Sequence[str] | None,
+    accession_filter: Sequence[str] | None,
+    taxonomy_filter_map: dict[str, Sequence[str]] | None = None,
 ) -> DatasetExpr | None:
     """
     Combine equality filters into a single dataset expression (AND).
@@ -112,7 +110,10 @@ def _build_filter_expr(
 
     return expr
 
-def _build_biotype_pct_pushdown(dset: ds.Dataset, biotype_pct_filter: Optional[dict]) -> tuple[Optional[ds.Expression], Optional[str]]:
+def _build_biotype_pct_pushdown(
+        dset: ds.Dataset,
+        biotype_pct_filter: dict | None
+) -> tuple[ds.Expression | None, str | None]:
     """
     If the chosen biotype has a precomputed *_percentage column, return (expr, column_name)
     where expr is: pct_col BETWEEN [min, max]. Otherwise (None, None).
@@ -129,7 +130,10 @@ def _build_biotype_pct_pushdown(dset: ds.Dataset, biotype_pct_filter: Optional[d
         return expr, col
     return None, None
 
-def _build_range_expr(dset: ds.Dataset, ranges: Optional[dict]) -> Optional[ds.Expression]:
+def _build_range_expr(
+        dset: ds.Dataset,
+        ranges: dict | None
+) -> ds.Expression | None:
     """Build (col BETWEEN lo AND hi) AND ... for a dict like {'col': [lo, hi]}."""
     if not ranges:
         return None
@@ -145,7 +149,7 @@ def _build_range_expr(dset: ds.Dataset, ranges: Optional[dict]) -> Optional[ds.E
         expr = e if expr is None else (expr & e)
     return expr
 
-def list_biotype_columns() -> Dict[str, List[str]]:
+def list_biotype_columns() -> dict[str, list[str]]:
     """
     Return {'pct': [...], 'count': [...]} from dashboard_main based on *_percentage and *_count.
     Excludes items in config.GENE_BIOTYPE_EXCLUDE.
@@ -166,11 +170,11 @@ def summarize_biotypes(
     *,
     metric: str,  # "pct" (mean of *_percentage) or "count" (sum of *_count)
     biotype_cols: list[str] | None,
-    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
-    taxonomy_filter: Optional[Sequence[str]] = None,   # legacy (ignored if map is given)
-    climate_filter: Optional[Sequence[str]] = None,
-    bio_levels_filter: Optional[Sequence[str]] = None,
-    bio_values_filter: Optional[Sequence[str]] = None,
+    taxonomy_filter_map: dict[str, Sequence[str]] | None = None,
+    taxonomy_filter: Sequence[str] | None = None,   # legacy (ignored if map is given)
+    climate_filter: Sequence[str] | None = None,
+    bio_levels_filter: Sequence[str] | None = None,
+    bio_values_filter: Sequence[str] | None = None,
     batch_size: int = 8192,
 ) -> pd.DataFrame:
     """
@@ -249,17 +253,17 @@ def summarize_biotypes(
 
 def load_dashboard_page(
     *,
-    columns: List[str],
+    columns: list[str],
     page: int,
     page_size: int,
-    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
-    bio_levels_filter: Optional[Sequence[str]] = None,
-    bio_values_filter: Optional[Sequence[str]] = None,
-    climate_filter: Optional[Dict] = None,           # reserved for later
-    biotype_pct_filter: Optional[dict] = None,       # {"biotype": str, "min": float, "max": float}
-    climate_ranges: Optional[dict] = None,
-    biogeo_ranges: Optional[dict] = None,
-) -> Tuple[pd.DataFrame, int]:
+    taxonomy_filter_map: dict[str, Sequence[str]] | None = None,
+    bio_levels_filter: Sequence[str] | None = None,
+    bio_values_filter: Sequence[str] | None = None,
+    climate_filter: dict | None = None,           # reserved for later
+    biotype_pct_filter: dict | None = None,       # {"biotype": str, "min": float, "max": float}
+    climate_ranges: dict | None = None,
+    biogeo_ranges: dict | None = None,
+) -> tuple[pd.DataFrame, int]:
     """
     Return (page_df, total_rows_after_filters) for the Data Browser.
 
@@ -336,7 +340,7 @@ def load_dashboard_page(
     )
 
     # Collect filtered rows
-    frames: List[pd.DataFrame] = []
+    frames: list[pd.DataFrame] = []
     for rb in scanner.to_batches():
         if rb.num_rows == 0:
             continue
@@ -384,14 +388,14 @@ def load_dashboard_page(
 
 def count_dashboard_rows(
     *,
-    taxonomy_filter: Optional[Sequence[str]] = None,
-    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
-    climate_filter: Optional[Sequence[str]] = None,
-    bio_levels_filter: Optional[Sequence[str]] = None,
-    bio_values_filter: Optional[Sequence[str]] = None,
-    biotype_pct_filter: Optional[dict] = None,     # {"biotype": str, "min": float, "max": float}
-    climate_ranges: Optional[dict] = None,
-    biogeo_ranges: Optional[dict] = None,
+    taxonomy_filter: Sequence[str] | None = None,
+    taxonomy_filter_map: dict[str, Sequence[str]] | None = None,
+    climate_filter: Sequence[str] | None = None,
+    bio_levels_filter: Sequence[str] | None = None,
+    bio_values_filter: Sequence[str] | None = None,
+    biotype_pct_filter: dict | None = None,     # {"biotype": str, "min": float, "max": float}
+    climate_ranges: dict | None = None,
+    biogeo_ranges: dict | None = None,
 ) -> int:
     """
         Count rows after applying taxonomy + biogeo pushdown and optional biotype-% row filter.
@@ -531,14 +535,14 @@ def _coerce_values_for_column(dset: ds.Dataset, column: str, vals: Sequence) -> 
 def distinct_values_for_column(
     column: str,
     *,
-    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
-    taxonomy_filter: Optional[Sequence[str]] = None,   # legacy single-col (optional)
-    climate_filter: Optional[Sequence[str]] = None,
-    bio_levels_filter: Optional[Sequence[str]] = None,
-    bio_values_filter: Optional[Sequence[str]] = None,
-    biotype_pct_filter: Optional[dict] = None,
-    climate_ranges: Optional[dict] = None,
-    biogeo_ranges: Optional[dict] = None,
+    taxonomy_filter_map: dict[str, Sequence[str]] | None  = None,
+    taxonomy_filter: Sequence[str] | None = None,   # legacy single-col (optional)
+    climate_filter: Sequence[str] | None = None,
+    bio_levels_filter: Sequence[str] | None = None,
+    bio_values_filter: Sequence[str] | None = None,
+    biotype_pct_filter: dict | None = None,
+    climate_ranges: dict | None = None,
+    biogeo_ranges: dict | None = None,
     limit: int = 5000,
 ) -> list[str]:
     """
@@ -658,14 +662,14 @@ def summarize_biotypes_by_rank(
     *,
     group_rank: str,
     biotype_cols: list[str] | None,     # concrete *_count column names or None -> auto-detect
-    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
-    taxonomy_filter: Optional[Sequence[str]] = None,   # legacy
-    climate_filter: Optional[Sequence[str]] = None,
-    bio_levels_filter: Optional[Sequence[str]] = None,
-    bio_values_filter: Optional[Sequence[str]] = None,
-    biotype_pct_filter: Optional[dict] = None,
-    climate_ranges: Optional[dict] = None,
-    biogeo_ranges: Optional[dict] = None,
+    taxonomy_filter_map: dict[str, Sequence[str]] | None = None,
+    taxonomy_filter: Sequence[str] | None = None,   # legacy
+    climate_filter: Sequence[str] | None = None,
+    bio_levels_filter: Sequence[str] | None = None,
+    bio_values_filter: Sequence[str] | None = None,
+    biotype_pct_filter: dict | None = None,
+    climate_ranges: dict | None = None,
+    biogeo_ranges: dict | None = None,
     batch_size: int = 8192,
 ) -> pd.DataFrame:
     """
@@ -746,8 +750,8 @@ def summarize_biotypes_by_rank(
     if extra_filter_col: read_cols.append(extra_filter_col)
 
     # Accumulators
-    sums: Dict[Tuple[str, str], float] = {}
-    group_totals: Dict[str, float] = {}
+    sums: dict[tuple[str, str], float] = {}
+    group_totals: dict[str, float] = {}
 
     scanner = ds.Scanner.from_dataset(dset, columns=read_cols, filter=expr, batch_size=batch_size)
     for rb in scanner.to_batches():
@@ -801,7 +805,7 @@ def summarize_biotypes_by_rank(
     rows = []
 
     # precompute fallback denominators = sum of included biotype counts per group
-    fallback_totals: Dict[str, float] = {}
+    fallback_totals: dict[str, float] = {}
     for (grp, col), val in sums.items():
         fallback_totals[grp] = fallback_totals.get(grp, 0.0) + val
 
@@ -829,14 +833,14 @@ def summarize_biotypes_by_rank(
 def summarize_biotype_totals(
     *,
     biotype_cols: list[str] | None = None,          # *_count columns or None → auto-detect
-    taxonomy_filter_map: Optional[Dict[str, Sequence[str]]] = None,
-    taxonomy_filter: Optional[Sequence[str]] = None,   # legacy
-    climate_filter: Optional[Sequence[str]] = None,
-    bio_levels_filter: Optional[Sequence[str]] = None,
-    bio_values_filter: Optional[Sequence[str]] = None,
-    biotype_pct_filter: Optional[dict] = None,      # NEW: {"biotype": str, "min": float, "max": float}
-    climate_ranges: Optional[dict] = None,
-    biogeo_ranges: Optional[dict] = None,
+    taxonomy_filter_map: dict[str, Sequence[str]] | None = None,
+    taxonomy_filter: Sequence[str] | None = None,   # legacy
+    climate_filter: Sequence[str] | None = None,
+    bio_levels_filter: Sequence[str] | None = None,
+    bio_values_filter: Sequence[str] | None = None,
+    biotype_pct_filter: dict | None = None,      # NEW: {"biotype": str, "min": float, "max": float}
+    climate_ranges: dict | None = None,
+    biogeo_ranges: dict | None = None,
     batch_size: int = 8192,
 ) -> pd.DataFrame:
     """
@@ -914,7 +918,7 @@ def summarize_biotype_totals(
             if c in dset.schema.names:
                 read_cols.add(c)
 
-    sums: Dict[str, float] = {c: 0.0 for c in cols}
+    sums: dict[str, float] = {c: 0.0 for c in cols}
 
     scanner = ds.Scanner.from_dataset(
         dset,
@@ -964,7 +968,7 @@ def summarize_biotype_totals(
 
 
 @lru_cache(maxsize=32)
-def _get_column_min_max_cached(cols_key: tuple[str, ...]) -> Dict[str, Tuple[float | None, float | None]]:
+def _get_column_min_max_cached(cols_key: tuple[str, ...]) -> dict[str, tuple[float | None, float | None]]:
     """
     Internal: scan the Parquet once for the requested columns and return {col: (min, max)}.
     Cached by the exact tuple of column names.
@@ -1000,7 +1004,7 @@ def _get_column_min_max_cached(cols_key: tuple[str, ...]) -> Dict[str, Tuple[flo
     return result
 
 
-def get_column_min_max(columns: List[str]) -> Dict[str, Tuple[float | None, float | None]]:
+def get_column_min_max(columns: list[str]) -> dict[str, tuple[float | None, float | None]]:
     """
     Public helper: return {col: (min, max)} for the requested numeric columns.
     Falls back to (None, None) per column if the dataset/column is missing.
