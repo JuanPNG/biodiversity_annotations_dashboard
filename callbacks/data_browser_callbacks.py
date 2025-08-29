@@ -1,6 +1,3 @@
-from __future__ import annotations
-
-import pandas as pd
 from dash import Input, Output, State, callback, no_update
 
 from utils import config

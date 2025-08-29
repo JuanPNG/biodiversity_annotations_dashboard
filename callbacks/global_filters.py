@@ -19,8 +19,6 @@
 # - Keep callbacks thin; pack/prune via utils.data_tools.gf_* helpers.
 # -----------------------------------------------------------------------------
 
-from __future__ import annotations
-
 from dash import Input, Output, State, callback, no_update
 
 from utils import config
