@@ -15,7 +15,7 @@
 
 from __future__ import annotations
 from functools import lru_cache
-from typing import Dict, Iterable, List, Mapping, Optional, Sequence, Set, Tuple
+from typing import Iterable, Mapping, Sequence
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -57,15 +57,15 @@ def _dataset(path: Path | str) -> ds.Dataset | None:
 # ---------------------------------------------------------------------------
 
 def resolve_preset_columns(
-        all_columns: List[str],
+        all_columns: list[str],
         patterns: Iterable[str]
-) -> List[str]:
+) -> list[str]:
     """
     Given a list of columns and simple wildcard patterns (suffix '*'),
     return columns in the order they appear in `all_columns`.
     """
     pats = list(patterns or [])
-    resolved: List[str] = []
+    resolved: list[str] = []
     seen = set()
 
     def matches(col: str, pat: str) -> bool:
@@ -80,7 +80,7 @@ def resolve_preset_columns(
     return resolved
 
 
-def list_unique_values_for_column(column: str, limit: int = 5000) -> List[dict]:
+def list_unique_values_for_column(column: str, limit: int = 5000) -> list[dict]:
     dset = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
     if not dset or column not in dset.schema.names:
         return []
@@ -130,7 +130,7 @@ def list_biogeo_levels(limit: int = 200) -> list[dict[str, str]]:
 def list_biogeo_values(
         levels: list[str] | None,
         limit: int = 5000
-) -> List[Dict[str, str]]:
+) -> list[dict[str, str]]:
     dset = _dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
     if not dset or config.BIOGEO_VALUE_COL not in dset.schema.names:
         return []
@@ -150,7 +150,7 @@ def list_rank_values_with_filters(
     rank: str,
     higher_rank_selections: dict[str, Sequence[str]] | None,
     limit: int = 5000,
-) -> List[dict]:
+) -> list[dict]:
     ranks_map = higher_rank_selections or {}
     values = distinct_values_for_column(rank, taxonomy_filter_map=ranks_map)
     values = sorted(values)[:limit]
@@ -359,7 +359,7 @@ def kpi_filtered_accessions(
     biotype_pct_filter: dict | None,
     climate_ranges=None,
     biogeo_ranges=None,
-) -> Set[str]:
+) -> set[str]:
     main = _io_dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
     if not main or not config.ACCESSION_COL_MAIN:
         return set()
@@ -402,7 +402,7 @@ def kpi_filtered_accessions(
     return set(pd.Series(tbl.column(0).to_pandas()).dropna().astype(str).unique().tolist())
 
 
-def kpi_biogeo_distinct_counts(accessions: Set[str] | List[str]) -> tuple[int, int, int]:
+def kpi_biogeo_distinct_counts(accessions: set[str] | list[str]) -> tuple[int, int, int]:
     if not accessions:
         return (0, 0, 0)
     bset = _io_dataset(config.DATA_DIR / config.BIOGEO_LONG_FN)
