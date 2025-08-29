@@ -91,6 +91,7 @@ def list_unique_values_for_column(column: str, limit: int = 5000) -> List[dict]:
     return [{"label": v, "value": v} for v in vals]
 
 
+@lru_cache(maxsize=1)
 def list_taxonomy_options() -> Dict[str, List[dict]]:
     out: dict[str, list[dict]] = {}
     for col in (config.TAXONOMY_RANK_COLUMNS or []):
