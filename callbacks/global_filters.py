@@ -220,9 +220,9 @@ def sync_global_store(
     - Full-span sliders mean “no filter” and are omitted from the store.
     - The parameter name `climate_labels` is persisted under store key "climate".
     """
-
-
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+    if "tax_id" not in ranks:
+        ranks.append("tax_id")
     values_by_rank = {
         "kingdom": tax_kingdom, "phylum": tax_phylum, "class": tax_class, "order": tax_order,
         "family": tax_family, "genus": tax_genus, "species": tax_species, "tax_id": tax_id,
