@@ -1,7 +1,8 @@
 # utils/data_tools.py
 # -----------------------------------------------------------------------------
-# Lightweight utilities used by callbacks. Keep helpers small, pure where possible,
-# and grouped by the callback/page that uses them.
+# Utilities for packing/pruning the global filters store and small UI helpers.
+# Keep pure functions here (no side effects); callbacks should stay thin and
+# delegate to these helpers. See utils/types.GlobalFilters for the contract.
 #
 # Sections:
 # - Common option builders (taxonomy, climate, biogeo)
@@ -532,5 +533,24 @@ def ga_apply_drill_to_taxonomy_map(drill_path: list[dict], taxonomy_map: dict) -
         if r and v:
             tmap.setdefault(r, [])
             if v not in tmap[r]:
-                tmap[r] = list(tmap[r]) + [v]
+                tmap[r] = list(tmap[r])  [v]
     return tmap
+
+
+# Explicit public API (import surfaces used across callbacks/pages)
+__all__ = [
+    # Global-filters helpers
+    "gf_clean_list",
+    "gf_is_full_span",
+    "gf_build_taxonomy_map_from_values",
+    "gf_build_climate_ranges",
+    "gf_build_biogeo_ranges",
+    "gf_build_biotype_pct",
+    "gf_build_store",
+    # Option list helpers
+    "list_taxonomy_options",
+    "list_biogeo_levels",
+    "list_biogeo_values",
+    "list_taxonomy_options_cascaded",
+    "biotype_pct_columns",
+]
