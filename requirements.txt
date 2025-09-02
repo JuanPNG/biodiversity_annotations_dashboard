@@ -3,7 +3,6 @@ dash-ag-grid>=32.2
 plotly>=5.20
 pandas>=2.2
 pyarrow>=15
-flask-caching>=2.3
 dash_ag_grid~=32.3.1
 pytest~=8.4.1
 numpy~=2.3.2
