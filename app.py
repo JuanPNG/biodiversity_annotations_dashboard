@@ -1,8 +1,7 @@
-from __future__ import annotations
-
 from dash import Dash, html, dcc
 import dash
 from layouts.navbar import get_navbar
+import os
 
 app = Dash(
     __name__,
@@ -12,6 +11,10 @@ app = Dash(
 )
 
 server = app.server
+# --- Health check for Cloud Run / load balancers ---
+@server.get("/healthz")
+def healthz():
+    return "ok", 200
 
 # --- Main shell ---
 app_shell = html.Div(
@@ -45,4 +48,5 @@ import callbacks.home_kpis  # noqa: F401
 import callbacks.biotype_environment_callbacks  # noqa: F401
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=8050)
+    port = int(os.getenv("PORT", "8050"))
+    app.run(debug=True, host="0.0.0.0", port=port)
