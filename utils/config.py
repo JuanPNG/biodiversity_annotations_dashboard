@@ -20,6 +20,17 @@ TAXONOMY_RANK_COLUMNS = [
 # Climate label (TODO: Kopen classification)
 CLIMATE_LABEL_COL = "clim_bio1_mean" # Provisional
 
+# Human-readable labels for climate variables (used in the UI).
+# Keys are the actual column names in `dashboard_main.parquet`.
+CLIMATE_LABELS: dict[str, str] = {
+    "clim_bio1_mean":  "Annual Mean Temperature (°C, mean)",
+    "clim_bio12_mean": "Annual Precipitation (mm, mean)",
+    "clim_bio7_mean":  "Temperature Annual Range (°C, mean)",
+    "clim_bio15_mean": "Precipitation Seasonality (CV, %)",
+    # More variables comming soon.
+}
+
+
 # Biogeographic region label column in biogeo_long
 ACCESSION_COL_BIOGEO = "accession"       # in biogeo_long
 BIOGEO_LEVEL_COL = "level"
