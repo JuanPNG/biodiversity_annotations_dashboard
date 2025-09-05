@@ -285,6 +285,7 @@ hr {
 /* RangeSlider tweaks: ensure ticks don’t clutter */
 .rc-slider-mark-text {
   color: var(--text-dim) !important;
+  font-size: 0.6rem;
 }
 .rc-slider-dot {
   border-color: transparent !important; /* hide little dots per step */
