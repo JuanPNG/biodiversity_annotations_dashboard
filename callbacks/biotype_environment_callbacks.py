@@ -13,6 +13,7 @@ from utils.data_tools import (
     sizes_from_total,
     stable_sample,
     get_accessions_for_biogeo,
+    ui_label_for_column,
 )
 
 PCT_SUFFIX   = config.GENE_BIOTYPE_PCT_SUFFIX
@@ -171,7 +172,7 @@ def _make_fig(
         height=520,
         autosize=False,
     )
-    fig.update_xaxes(title_text=xcol, type=("log" if logx else "linear"), rangemode="tozero")
+    fig.update_xaxes(title_text=ui_label_for_column(xcol), type=("log" if logx else "linear"), rangemode="tozero")
     fig.update_yaxes(title_text=y_axis_title, type=("log" if logy else "linear"), rangemode="tozero")
     return fig
 
