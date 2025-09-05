@@ -1,7 +1,7 @@
 import math
 
 from dash import html, dcc
-from utils import parquet_io
+from utils import parquet_io, config
 from utils.data_tools import gf_build_quartile_int_marks
 
 # Read all extents we need in a single call (cached in parquet_io)
@@ -12,10 +12,15 @@ except Exception:
     _ENV_EXT = {c: (None, None) for c in _ENV_COLS}
 
 
-def _slider_from_col(label: str, slider_id: str, col: str, fallback: tuple[float, float]) -> html.Div:
+def _slider_from_col(label: str | None, slider_id: str, col: str, fallback: tuple[float, float]) -> html.Div:
     """
     Build a RangeSlider initialized to the dataset's min/max for the given column.
+    If `label` is None, a human-readable label is pulled from config.CLIMATE_LABELS;
+    otherwise the provided label is used.
     """
+    # Resolve label from central mapping when not provided
+    ui_label = label or config.CLIMATE_LABELS.get(col, col)
+
     vmin, vmax = _ENV_EXT.get(col, (None, None))
     if vmin is None or vmax is None:
         vmin, vmax = fallback
@@ -27,7 +32,7 @@ def _slider_from_col(label: str, slider_id: str, col: str, fallback: tuple[float
 
     return html.Div(
         [
-            html.Label(label, className="control-label"),
+            html.Label(ui_label, className="control-label"),
             dcc.RangeSlider(
                 id=slider_id,
                 min=vmin,
@@ -131,40 +136,14 @@ def get_navbar() -> html.Header:
                          dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")],
                         className="filter-col",
                     ),
-                    # html.Div(
-                    #     [html.Label("Annual Mean Temperature (°C)", className="control-label"),
-                    #      dcc.RangeSlider(
-                    #          id="climate-range-clim_bio1_mean",
-                    #          min=0, max=100, value=[0, 100],  # initialized by callback
-                    #          allowCross=False,
-                    #          tooltip={"always_visible": False, "placement": "bottom"},
-                    #          updatemode="mouseup",
-                    #          persistence=True, persistence_type="session",
-                    #      )],
-                    #     className="filter-col",
-                    # ),
-                    # html.Div(
-                    #     [html.Label("Annual Precipitation (mm)", className="control-label"),
-                    #      dcc.RangeSlider(
-                    #          id="climate-range-clim_bio12_mean",
-                    #          min=0, max=1000, value=[0, 1000],  # initialized by callback
-                    #          allowCross=False,
-                    #          tooltip={"always_visible": False, "placement": "bottom"},
-                    #          updatemode="mouseup",
-                    #          persistence=True, persistence_type="session",
-                    #      )],
-                    #     className="filter-col",
-                    # ),
-
-                    # REPLACE the two hard-coded sliders with data-driven ones:
                     _slider_from_col(
-                        "Annual Mean Temperature (°C)",
+                        None,
                         "climate-range-clim_bio1_mean",
                         "clim_bio1_mean",
                         fallback=(-50.0, 50.0),
                     ),
                     _slider_from_col(
-                        "Annual Precipitation (mm)",
+                        None,
                         "climate-range-clim_bio12_mean",
                         "clim_bio12_mean",
                         fallback=(0.0, 8000.0),
