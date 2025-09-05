@@ -483,7 +483,8 @@ def db_make_column_defs(df: pd.DataFrame) -> list[dict]:
     url_cols = set(getattr(config, "URL_COLUMNS", []) or [])
     defs: list[dict] = []
     for col in df.columns:
-        c = {"headerName": col, "field": col}
+        header = ui_label_for_column(col)
+        c = {"headerName": header, "field": col}
         if col in url_cols:
             c.update({
                 "cellRenderer": "markdown",
@@ -496,6 +497,16 @@ def db_make_column_defs(df: pd.DataFrame) -> list[dict]:
             c.update({"filter": "agTextColumnFilter"})
         defs.append(c)
     return defs
+
+# --- UI label helpers --------------------------------------------------------
+
+def ui_label_for_column(col: str) -> str:
+    """
+    Return a human-readable label for a data column.
+    Currently maps climate columns via config.CLIMATE_LABELS; falls back to the raw name.
+    """
+    from utils import config  # local import to avoid cycles at module import time
+    return (config.CLIMATE_LABELS or {}).get(col, col)
 
 
 # ---------------------------------------------------------------------------
