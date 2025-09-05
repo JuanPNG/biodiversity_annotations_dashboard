@@ -22,8 +22,9 @@ CLIMATE_LABEL_COL = "clim_bio1_mean" # Provisional
 
 # Human-readable labels for climate variables (used in the UI).
 # Keys are the actual column names in `dashboard_main.parquet`.
-CLIMATE_LABELS: dict[str, str] = {
-    "clim_bio1_mean":  "Annual Mean Temperature (°C, mean)",
+COLUMN_LABELS: dict[str, str] = {
+    # Climate variables
+    "clim_bio1_mean": "Annual Mean Temperature (°C, mean)",
     "clim_bio1_max":  "Annual Mean Temperature (°C, max)",
     "clim_bio1_min":  "Annual Mean Temperature (°C, min)",
     "clim_bio12_mean": "Annual Precipitation (mm, mean)",
@@ -35,7 +36,13 @@ CLIMATE_LABELS: dict[str, str] = {
     "clim_bio15_mean": "Precipitation Seasonality (CV, mean)",
     "clim_bio15_max": "Precipitation Seasonality (CV, max)",
     "clim_bio15_min": "Precipitation Seasonality (CV, min)",
-    # More variables comming soon.
+
+    # Distribution variables
+    "range_km2": "Distribution Range Size (km², EOO)",
+    "mean_elevation": "Mean Elevation (m)",
+    "min_elevation": "Minimum Elevation (m)",
+    "max_elevation": "Maximum Elevation (m)",
+    "median_elevation": "Median Elevation (m)",
 }
 
 
