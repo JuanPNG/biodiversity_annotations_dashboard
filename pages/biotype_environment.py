@@ -17,6 +17,8 @@ DIST_X_CHOICES = ["range_km2"]  # you can add mean_elevation later
 
 
 def layout():
+    # Panel A: Climate (controls on the side)
+    climate_options = [{"label": config.CLIMATE_LABELS.get(c, c), "value": c} for c in CLIMATE_X_CHOICES]
     # --- Plot controls (collapsible) ---
     plot_controls_group = html.Details(
         [
@@ -141,7 +143,7 @@ def layout():
                             html.H4("Climate X", className="panel-title"),
                             dcc.Dropdown(
                                 id="bs-x-climate",
-                                options=[{"label": c, "value": c} for c in CLIMATE_X_CHOICES],
+                                options=climate_options,   # <— use friendly labels
                                 value=CLIMATE_X_CHOICES[0],
                                 clearable=False,
                                 persistence=True, persistence_type="session",
