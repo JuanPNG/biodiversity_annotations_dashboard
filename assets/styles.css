@@ -262,15 +262,51 @@ hr {
 .nav-card--disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ================================
-   AG Grid (optional minimal tweaks)
+   AG Grid
 =================================== */
 
 .ag-theme-alpine-dark, .ag-theme-alpine {
+  /* your theme colors remain */
   --ag-background-color: var(--surface-1);
   --ag-foreground-color: var(--text);
   --ag-border-color: var(--border);
   --ag-row-hover-color: rgba(255,255,255,0.04);
+
+  /* make room so nothing gets clipped */
+  --ag-header-height: 44px;               /* column header row */
+  --ag-floating-filters-height: 44px;     /* floating filter row */
 }
+
+/* Give header a subtle divider so it feels 'fixed' while body scrolls */
+.ag-theme-alpine-dark .ag-header {
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06), 0 6px 12px rgba(0,0,0,0.12);
+  background-color: var(--surface-1);
+}
+
+/* Comfortable filter input height */
+.ag-theme-alpine-dark .ag-floating-filter input,
+.ag-theme-alpine-dark .ag-floating-filter .ag-input-field-input {
+  height: 28px;
+  line-height: 28px;
+  padding: 2px 8px;
+}
+
+/* Keep scrollbars obvious inside the grid viewport */
+#db-grid .ag-root-wrapper,
+#db-grid .ag-root-wrapper-body,
+#db-grid .ag-body-viewport,
+#db-grid .ag-center-cols-viewport {
+  overflow: auto !important;
+}
+
+/* (Optional) slightly clearer scrollbars on WebKit */
+#db-grid .ag-body-viewport::-webkit-scrollbar,
+#db-grid .ag-center-cols-viewport::-webkit-scrollbar { width: 10px; height: 10px; }
+#db-grid .ag-body-viewport::-webkit-scrollbar-thumb,
+#db-grid .ag-center-cols-viewport::-webkit-scrollbar-thumb {
+  border-radius: 8px; background-clip: padding-box; background: rgba(255,255,255,0.24);
+}
+
 
 /* ================================
    Misc

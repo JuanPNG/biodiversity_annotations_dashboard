@@ -95,8 +95,14 @@ layout = html.Main(
                 "rowSelection": {"mode": "multiRow", "enableClickSelection": True},
                 "rowMultiselectWithClick": True,
                 "maintainColumnOrder": True,
+                "alwaysShowHorizontalScroll": True,
             },
-            style={"height": "70vh", "width": "100%"},
+            style={
+                "height": "70vh",
+                "width": "100%",
+                "overflowX": "auto",
+                "overflowY": "auto",
+            },
             className="ag-theme-alpine-dark"
         ),
     ],
