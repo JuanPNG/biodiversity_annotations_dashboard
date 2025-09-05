@@ -502,11 +502,12 @@ def db_make_column_defs(df: pd.DataFrame) -> list[dict]:
 
 def ui_label_for_column(col: str) -> str:
     """
-    Return a human-readable label for a data column.
-    Currently maps climate columns via config.CLIMATE_LABELS; falls back to the raw name.
+    Return a human-readable label for any known column using config.COLUMN_LABELS.
+    Falls back to the raw column name.
     """
-    from utils import config  # local import to avoid cycles at module import time
-    return (config.CLIMATE_LABELS or {}).get(col, col)
+    from utils import config
+    m = getattr(config, "COLUMN_LABELS", {})
+    return m.get(col, col)
 
 
 # ---------------------------------------------------------------------------
