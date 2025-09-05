@@ -2,7 +2,7 @@ import math
 
 from dash import html, dcc
 from utils import parquet_io, config
-from utils.data_tools import gf_build_quartile_int_marks
+from utils.data_tools import gf_build_quartile_int_marks, ui_label_for_column
 
 # Read all extents we need in a single call (cached in parquet_io)
 _ENV_COLS = ["clim_bio1_mean", "clim_bio12_mean", "range_km2"]
@@ -19,7 +19,7 @@ def _slider_from_col(label: str | None, slider_id: str, col: str, fallback: tupl
     otherwise the provided label is used.
     """
     # Resolve label from central mapping when not provided
-    ui_label = label or config.CLIMATE_LABELS.get(col, col)
+    ui_label = label or ui_label_for_column(col)
 
     vmin, vmax = _ENV_EXT.get(col, (None, None))
     if vmin is None or vmax is None:
@@ -182,21 +182,8 @@ def get_navbar() -> html.Header:
                          dcc.Dropdown(id="filter-bio-value", options=[], multi=True, placeholder="pick regions…")],
                         className="filter-col",
                     ),
-                    # html.Div(
-                    #     [html.Label("Distribution range size (km²)", className="control-label"),
-                    #      dcc.RangeSlider(
-                    #          id="biogeo-range-range_km2",
-                    #          min=0, max=1_000_000, value=[0, 1_000_000],  # initialized by callback
-                    #          allowCross=False,
-                    #          tooltip={"always_visible": False, "placement": "bottom"},
-                    #          updatemode="mouseup",
-                    #          persistence=True, persistence_type="session",
-                    #      )],
-                    #     className="filter-col",
-                    # ),
-
                     _slider_from_col(
-                        "Distribution range size (km²)",
+                        None,
                         "biogeo-range-range_km2",
                         "range_km2",
                         fallback=(0.0, 1_000_000.0),
