@@ -24,9 +24,17 @@ CLIMATE_LABEL_COL = "clim_bio1_mean" # Provisional
 # Keys are the actual column names in `dashboard_main.parquet`.
 CLIMATE_LABELS: dict[str, str] = {
     "clim_bio1_mean":  "Annual Mean Temperature (°C, mean)",
+    "clim_bio1_max":  "Annual Mean Temperature (°C, max)",
+    "clim_bio1_min":  "Annual Mean Temperature (°C, min)",
     "clim_bio12_mean": "Annual Precipitation (mm, mean)",
+    "clim_bio12_max": "Annual Precipitation (mm, max)",
+    "clim_bio12_min": "Annual Precipitation (mm, min)",
     "clim_bio7_mean":  "Temperature Annual Range (°C, mean)",
-    "clim_bio15_mean": "Precipitation Seasonality (CV, %)",
+    "clim_bio7_max":  "Temperature Annual Range (°C, max)",
+    "clim_bio7_min":  "Temperature Annual Range (°C, min)",
+    "clim_bio15_mean": "Precipitation Seasonality (CV, mean)",
+    "clim_bio15_max": "Precipitation Seasonality (CV, max)",
+    "clim_bio15_min": "Precipitation Seasonality (CV, min)",
     # More variables comming soon.
 }
 
