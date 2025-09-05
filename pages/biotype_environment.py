@@ -4,6 +4,7 @@ from __future__ import annotations
 import dash
 from dash import html, dcc
 from utils import config
+from utils.data_tools import ui_label_for_column
 
 dash.register_page(
     __name__,
@@ -17,8 +18,9 @@ DIST_X_CHOICES = ["range_km2"]  # you can add mean_elevation later
 
 
 def layout():
-    # Panel A: Climate (controls on the side)
-    climate_options = [{"label": config.CLIMATE_LABELS.get(c, c), "value": c} for c in CLIMATE_X_CHOICES]
+    # Labels
+    climate_options = [{"label": ui_label_for_column(c), "value": c} for c in CLIMATE_X_CHOICES]
+    dist_options = [{"label": ui_label_for_column(c), "value": c} for c in DIST_X_CHOICES]
     # --- Plot controls (collapsible) ---
     plot_controls_group = html.Details(
         [
@@ -179,7 +181,7 @@ def layout():
                             html.H4("Distribution X", className="panel-title"),
                             dcc.Dropdown(
                                 id="bs-x-dist",
-                                options=[{"label": c, "value": c} for c in DIST_X_CHOICES],
+                                options=dist_options,
                                 value=DIST_X_CHOICES[0],
                                 clearable=False,
                                 persistence=True, persistence_type="session",
