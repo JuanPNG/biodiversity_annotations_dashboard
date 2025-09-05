@@ -1,8 +1,8 @@
+import math
+
 from dash import html, dcc
-
-
-# ADD these imports:
 from utils import parquet_io
+from utils.data_tools import gf_build_quartile_int_marks
 
 # Read all extents we need in a single call (cached in parquet_io)
 _ENV_COLS = ["clim_bio1_mean", "clim_bio12_mean", "range_km2"]
@@ -15,26 +15,35 @@ except Exception:
 def _slider_from_col(label: str, slider_id: str, col: str, fallback: tuple[float, float]) -> html.Div:
     """
     Build a RangeSlider initialized to the dataset's min/max for the given column.
-    Falls back if dataset/column is missing.
     """
     vmin, vmax = _ENV_EXT.get(col, (None, None))
     if vmin is None or vmax is None:
         vmin, vmax = fallback
+
+    slider_kwargs: dict = {}
+    if col == "clim_bio12_mean":
+        # Add clean, sparse labels
+        slider_kwargs["marks"] = gf_build_quartile_int_marks(vmin, vmax)
 
     return html.Div(
         [
             html.Label(label, className="control-label"),
             dcc.RangeSlider(
                 id=slider_id,
-                min=vmin, max=vmax, value=[vmin, vmax],
+                min=vmin,
+                max=vmax,
+                value=[vmin, vmax],
                 allowCross=False,
                 tooltip={"always_visible": False, "placement": "bottom"},
                 updatemode="mouseup",
-                persistence=True, persistence_type="session",
+                persistence=True,
+                persistence_type="session",
+                **slider_kwargs,  # only adds marks for precipitation
             ),
         ],
         className="filter-col",
     )
+
 
 def get_navbar() -> html.Header:
     links = [
