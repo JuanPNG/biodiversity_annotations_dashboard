@@ -11,6 +11,7 @@ from utils.data_tools import (
     resolve_preset_columns,
     db_to_markdown_link,
     db_make_column_defs,
+    ui_label_for_column,
 )
 
 # 1) Init: preset list + columns list (do NOT set db-columns.value here)
@@ -33,7 +34,7 @@ def init_presets_and_columns(_):
         all_cols = list_columns(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
     except Exception:
         return preset_opts, default_preset, []
-    col_opts = [{"label": c, "value": c} for c in all_cols]
+    col_opts = [{"label": ui_label_for_column(c), "value": c} for c in all_cols]
     return preset_opts, default_preset, col_opts
 
 
