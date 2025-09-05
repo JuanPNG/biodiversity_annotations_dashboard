@@ -12,7 +12,7 @@
 # - Biotype vs Environment helpers
 # - Genome Annotations helpers
 # -----------------------------------------------------------------------------
-
+import math
 from functools import lru_cache
 from typing import Iterable, Mapping, Sequence
 from pathlib import Path
@@ -339,6 +339,44 @@ def gf_build_store(
     return store
 
 
+def gf_build_quartile_int_marks(vmin: float, vmax: float) -> dict[int, str]:
+    """
+    Build sparse slider marks at ~quartiles for a numeric range:
+    min, 25%, 50%, 75%, max.
+
+    - Keys are integers so Dash reliably renders labels.
+    - Values are strings (e.g., "1000").
+    - Sliders remain continuous; these are labels only.
+
+    Returns empty dict when inputs are invalid.
+    """
+    try:
+        lo = float(vmin)
+        hi = float(vmax)
+    except Exception:
+        return {}
+
+    if not (math.isfinite(lo) and math.isfinite(hi)):
+        return {}
+
+    if hi < lo:
+        lo, hi = hi, lo
+
+    if hi == lo:
+        v = int(round(lo))
+        return {v: str(v)}
+
+    span = hi - lo
+    ticks = [lo, lo + 0.25 * span, lo + 0.50 * span, lo + 0.75 * span, hi]
+    ints = [int(round(t)) for t in ticks]
+
+    # Deduplicate in case rounding collapses adjacent values
+    marks: dict[int, str] = {}
+    for t in ints:
+        if t not in marks:
+            marks[t] = str(t)
+    return marks
+
 # ---------------------------------------------------------------------------
 # Home KPIs helpers (used by callbacks/home_kpis.py)
 # ---------------------------------------------------------------------------
@@ -595,6 +633,7 @@ __all__ = [
     "gf_build_biogeo_ranges",
     "gf_build_biotype_pct",
     "gf_build_store",
+    "gf_build_quartile_int_marks",
     # Option list helpers
     "list_taxonomy_options",
     "list_biogeo_levels",
