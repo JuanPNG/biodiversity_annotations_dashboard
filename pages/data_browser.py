@@ -8,11 +8,12 @@ dash.register_page(__name__, path="/data-browser", name="Data Browser")
 
 layout = html.Main(
     [
-        html.H2("Data Browser"),
+        html.H2("Data Browser", className="home-section-title"),
         html.P("Use the filters above to explore the data and identify species of interest. "
                "Click on 'Columns & Presets' to select and change the columns that are displayed in the table. "
                "Choose the page and the number of records to be displayed. "
-               "Use the filters specific to each column to narrow down your search further on the current table page."),
+               "Use the filters specific to each column to narrow down your search further on the current table page.",
+               className="prose"),
 
         # Collapsible: Columns & Presets (hidden by default)
         html.Details(

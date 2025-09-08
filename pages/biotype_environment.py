@@ -127,10 +127,11 @@ def layout():
 
     return html.Main(
         [
-            html.H2("Biotype vs Environment"),
+            html.H2("Biotype vs Environment", className="home-section-title"),
             html.P(
                 "Explore relationships between gene biotype abundance and climate/distribution. "
-                "All global filters (taxonomy, biogeography, climate, numeric ranges, biotype%) apply."
+                "All global filters (taxonomy, biogeography, climate, numeric ranges, biotype%) apply.",
+                className="prose"
             ),
 
             plot_controls_group,
