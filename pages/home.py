@@ -1,7 +1,6 @@
 # pages/home.py
 from __future__ import annotations
 import dash
-from dash import html, dcc
 
 dash.register_page(__name__, path="/", name="Home")
 
@@ -25,6 +24,15 @@ nav_cards = html.Div(
                 className="nav-card"
             ),
             href="/genome-annotations",
+            className="nav-card-link",
+        ),
+        dcc.Link(
+            html.Div(
+                [html.Div("Biotype vs Environment", className="card-title"),
+                 html.Div("Scatterplots of biotypes against climate and distribution.", className="card-sub")],
+                className="nav-card"
+            ),
+            href="/biotype-environment",
             className="nav-card-link",
         ),
         dcc.Link(
@@ -101,6 +109,7 @@ layout = html.Main(
                 html.Li("Home — Overview & KPIs reflecting active filters."),
                 html.Li("Data Browser — Table with server-side paging and column presets."),
                 html.Li("Genome Annotations — Stacked % bars with drill up/down."),
+                html.Li("Biotype vs Environment — Scatterplots linking biotypes with climate and distribution."),
             ]
         ),
         nav_cards
