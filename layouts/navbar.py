@@ -249,19 +249,22 @@ def get_navbar() -> html.Header:
     # --- NAVBAR: title left; logos pinned top-right; links + filters below ---
     return html.Header(
         [
-            # Title (left, not a link)
-            html.Span(
-                "Exploring Genome Annotations in Ecological Context",
-                className="brand",
+            # Head row: title + nav links (space reserved for logos via CSS)
+            html.Div(
+                [
+                    html.Span(
+                        "Exploring Genome Annotations in Ecological Context",
+                        className="brand",
+                    ),
+                    html.Nav(links, className="nav-links"),
+                ],
+                className="navbar-head",
             ),
 
-            # Main nav links (kept under the title)
-            html.Nav(links, className="nav-links"),
-
-            # Filters group (unchanged)
+            # Filters group
             data_filters_group,
 
-            # Logos: separate container pinned to the top-right of the navbar
+            # Logos pinned to top-right
             html.Div(
                 [
                     html.Img(src="/assets/AriseLogo.png", alt="Portal logo", className="navbar-logo"),
@@ -272,3 +275,4 @@ def get_navbar() -> html.Header:
         ],
         className="navbar",
     )
+
