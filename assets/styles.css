@@ -17,6 +17,10 @@
   --border: rgba(255,255,255,0.08);
   --border-2: rgba(255,255,255,0.12);
   --shadow: 0 4px 16px rgba(0,0,0,0.25);
+   /* Navbar logos: shared controls */
+  --logos-pad: 180px;     /* space reserved on the right for the logos */
+  --logo-main-h: 40px;    /* height for logo_main.png */
+  --logo-partner-h: 40px; /* height for partners_strip.png */
 }
 
 html, body {
@@ -52,11 +56,12 @@ hr {
 .navbar {
   position: sticky;
   top: 0;
-  z-index: 5;
+  z-index: 10;
   background: linear-gradient(180deg, var(--bg) 60%, rgba(14,17,23,0.7) 100%);
   backdrop-filter: blur(4px);
   margin-bottom: 8px;
-  padding-bottom: 6px;
+  padding-bottom: 8px;
+  padding-right: var(--logos-pad);
 }
 
 .brand {
@@ -64,6 +69,9 @@ hr {
   font-weight: 700;
   margin-bottom: 10px;
   color: var(--text);
+  display: block;
+  max-width: calc(100% - var(--logos-pad));
+  white-space: normal;
 }
 
 .nav-links {
@@ -82,6 +90,53 @@ hr {
   border: 1px solid var(--border);
 }
 .nav-link:hover { background: var(--surface-3); }
+
+/* Compact brand row: logos + title inline, left aligned */
+.navbar-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;            /* space between logos and title */
+  flex-wrap: nowrap;   /* avoid wrapping */
+}
+
+.navbar-logo { height: var(--logo-main-h); width: auto; display: block; }      /* was larger */
+.navbar-partners { height: var(--logo-main-h); width: auto; display: block; opacity: .95; }
+
+/* Tablet: shrink both logos, reserve less space */
+@media (max-width: 900px) {
+  :root {
+    --logos-pad: 120px;
+    --logo-main-h: 20px;
+    --logo-partner-h: 18px;
+  }
+}
+
+/* Small-screen tweak: hide the partner strip if space is tight */
+@media (max-width: 640px) {
+  .navbar-partners { display: none; }
+  .navbar-logo {display: none}
+  .navbar { padding-right: 48px; }     /* reserve space just for the main logo */
+  .brand { max-width: calc(100% - 48px); }
+}
+
+/* Top row container so title stays left and logos stay right */
+.navbar-top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Pin logos to the top-right corner of the navbar */
+.navbar-logos {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
 
 /* ================================
    Collapsible Groups (Filters)
