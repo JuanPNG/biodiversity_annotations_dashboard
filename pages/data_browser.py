@@ -88,7 +88,7 @@ layout = html.Main(
                 "sortable": True,
                 "filter": True,
                 "resizable": True,
-                "minWidth": 100,
+                "minWidth": 110,
                 "floatingFilter": True
             },
             dashGridOptions={
@@ -96,6 +96,9 @@ layout = html.Main(
                 "rowMultiselectWithClick": True,
                 "maintainColumnOrder": True,
                 "alwaysShowHorizontalScroll": True,
+                "wrapHeaderText": True,
+                "autoHeaderHeight": True,
+                "enableBrowserTooltips": True,
             },
             style={
                 "height": "70vh",
