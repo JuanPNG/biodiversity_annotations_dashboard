@@ -120,8 +120,7 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
-    # --- ENVIRONMENT (biogeo + climate) ---
-    # --- CLIMATE (categorical + numeric) ---
+    # --- CLIMATE ---
     climate_group = html.Details(
         [
             html.Summary(
@@ -136,19 +135,8 @@ def get_navbar() -> html.Header:
                          dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")],
                         className="filter-col",
                     ),
-                    _slider_from_col(
-                        None,
-                        "climate-range-clim_bio1_mean",
-                        "clim_bio1_mean",
-                        fallback=(-50.0, 50.0),
-                    ),
-                    _slider_from_col(
-                        None,
-                        "climate-range-clim_bio12_mean",
-                        "clim_bio12_mean",
-                        fallback=(0.0, 8000.0),
-                    ),
-
+                    _slider_from_col(None, "climate-range-clim_bio1_mean", "clim_bio1_mean", fallback=(-50.0, 50.0)),
+                    _slider_from_col(None, "climate-range-clim_bio12_mean", "clim_bio12_mean", fallback=(0.0, 8000.0)),
                     html.Div(
                         html.Button("Reset climate", id="btn-reset-climate", n_clicks=0, className="btn-reset"),
                         className="filter-col",
@@ -161,7 +149,7 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
-    # --- BIOGEOGRAPHY (levels/values + distribution numeric) ---
+    # --- BIOGEOGRAPHY ---
     biogeography_group = html.Details(
         [
             html.Summary(
@@ -182,12 +170,7 @@ def get_navbar() -> html.Header:
                          dcc.Dropdown(id="filter-bio-value", options=[], multi=True, placeholder="pick regions…")],
                         className="filter-col",
                     ),
-                    _slider_from_col(
-                        None,
-                        "biogeo-range-range_km2",
-                        "range_km2",
-                        fallback=(0.0, 1_000_000.0),
-                    ),
+                    _slider_from_col(None, "biogeo-range-range_km2", "range_km2", fallback=(0.0, 1_000_000.0)),
                     html.Div(
                         html.Button("Reset biogeography", id="btn-reset-biogeo", n_clicks=0, className="btn-reset"),
                         className="filter-col",
@@ -200,7 +183,7 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
-    # --- BIOTYPE % (same IDs as before) ---
+    # --- BIOTYPE % ---
     biotype_group = html.Details(
         [
             html.Summary(
@@ -223,15 +206,12 @@ def get_navbar() -> html.Header:
                         [html.Label("Proportion (%)", className="control-label"),
                          dcc.RangeSlider(
                              id="bio-pct-range",
-                             min=0,
-                             max=100,
-                             value=[0, 100],
+                             min=0, max=100, value=[0, 100],
                              step=1,
                              marks={i: f"{i}%" for i in range(0, 101, 20)},
-                             dots=False,
-                             allowCross=False,
+                             dots=False, allowCross=False,
                              tooltip={"always_visible": False, "placement": "bottom"},
-                             updatemode="mouseup",  # update only on release (keeps callbacks light)
+                             updatemode="mouseup",
                          )],
                         className="filter-col filter-col--full",
                     ),
@@ -247,13 +227,11 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
-    # --- SUPER-GROUP: Data filters (wraps the three groups above) ---
-
+    # --- SUPER-GROUP: Data filters (wraps groups above) ---
     reset_all_toolbar = html.Div(
         html.Button("Reset all filters", id="btn-reset-all-filters", n_clicks=0, className="btn-reset"),
         className="filters-toolbar",
     )
-
     data_filters_group = html.Details(
         [
             html.Summary(
@@ -268,12 +246,29 @@ def get_navbar() -> html.Header:
         className="filter-group",
     )
 
+    # --- NAVBAR: title left; logos pinned top-right; links + filters below ---
     return html.Header(
         [
-            html.Div("Exploring Genome Annotations in Ecological Context", className="brand"),
+            # Title (left, not a link)
+            html.Span(
+                "Exploring Genome Annotations in Ecological Context",
+                className="brand",
+            ),
+
+            # Main nav links (kept under the title)
             html.Nav(links, className="nav-links"),
-            # Wrap everything in a single tidy collapsible
+
+            # Filters group (unchanged)
             data_filters_group,
+
+            # Logos: separate container pinned to the top-right of the navbar
+            html.Div(
+                [
+                    html.Img(src="/assets/AriseLogo.png", alt="Portal logo", className="navbar-logo"),
+                    html.Img(src="/assets/embl-ebi-logo.png", alt="Partner logos", className="navbar-partners"),
+                ],
+                className="navbar-logos",
+            ),
         ],
         className="navbar",
     )
