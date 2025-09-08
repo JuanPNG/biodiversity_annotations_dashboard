@@ -193,28 +193,6 @@ layout = html.Main(
             ],
             className="home-section",
         ),
-
-        # 4) Contact
-        html.Section(
-            [
-                html.H2("Contact & Feedback", className="home-section-title"),
-                html.P(
-                    [
-                        "Questions or ideas? ",
-                        html.A("Contact us", href="mailto:juann@ebi.ac.uk"),
-                        " • ",
-                        html.A(
-                            "Take our feedback survey",
-                            href="https://docs.google.com/forms/d/1vZI2oT06ehqyheihsfVEL9Tnmz5RjxVUjLBsrqEpJX8/edit",
-                            target="_blank",
-                            rel="noopener",
-                        ),
-                    ],
-                    className="home-section-body prose",
-                ),
-            ],
-            className="home-section",
-        ),
     ],
     className="page-container",
 )
