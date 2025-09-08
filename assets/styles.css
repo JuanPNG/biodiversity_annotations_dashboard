@@ -17,10 +17,10 @@
   --border: rgba(255,255,255,0.08);
   --border-2: rgba(255,255,255,0.12);
   --shadow: 0 4px 16px rgba(0,0,0,0.25);
-   /* Navbar logos: shared controls */
-  --logos-pad: 180px;     /* space reserved on the right for the logos */
-  --logo-main-h: 40px;    /* height for logo_main.png */
-  --logo-partner-h: 40px; /* height for partners_strip.png */
+
+  /* Navbar logos & padding */
+  --logos-pad: 180px;   /* space reserved on the right for the logos */
+  --logo-main-h: 40px;  /* height for both logos */
 }
 
 html, body {
@@ -61,16 +61,17 @@ hr {
   backdrop-filter: blur(4px);
   margin-bottom: 8px;
   padding-bottom: 8px;
-  padding-right: var(--logos-pad);
 }
 
+.navbar-head { padding-right: var(--logos-pad); }
+.navbar-head .brand { max-width: calc(100% - var(--logos-pad)); }
+
 .brand {
-  font-size: 1.35rem; /* agreed-sized brand */
+  font-size: 1.35rem;
   font-weight: 700;
   margin-bottom: 10px;
   color: var(--text);
   display: block;
-  max-width: calc(100% - var(--logos-pad));
   white-space: normal;
 }
 
@@ -91,42 +92,7 @@ hr {
 }
 .nav-link:hover { background: var(--surface-3); }
 
-/* Compact brand row: logos + title inline, left aligned */
-.navbar-brand-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;            /* space between logos and title */
-  flex-wrap: nowrap;   /* avoid wrapping */
-}
-
-.navbar-logo { height: var(--logo-main-h); width: auto; display: block; }      /* was larger */
-.navbar-partners { height: var(--logo-main-h); width: auto; display: block; opacity: .95; }
-
-/* Tablet: shrink both logos, reserve less space */
-@media (max-width: 900px) {
-  :root {
-    --logos-pad: 120px;
-    --logo-main-h: 20px;
-    --logo-partner-h: 18px;
-  }
-}
-
-/* Small-screen tweak: hide the partner strip if space is tight */
-@media (max-width: 640px) {
-  .navbar-partners { display: none; }
-  .navbar-logo {display: none}
-  .navbar { padding-right: 48px; }     /* reserve space just for the main logo */
-  .brand { max-width: calc(100% - 48px); }
-}
-
-/* Top row container so title stays left and logos stay right */
-.navbar-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-/* Pin logos to the top-right corner of the navbar */
+/* Logos pinned to top-right of the navbar */
 .navbar-logos {
   position: absolute;
   top: 8px;
@@ -135,6 +101,30 @@ hr {
   align-items: center;
   gap: 8px;
   flex-wrap: nowrap;
+}
+.navbar-logos img {
+  height: var(--logo-main-h);
+  width: auto;
+  display: block;
+  object-fit: contain;
+  opacity: .95;
+}
+.navbar-logo { /* keep classes for targeted tweaks if needed */ }
+.navbar-partners { }
+
+/* Tablet: both logos shrink together, reserve less space */
+@media (max-width: 900px) {
+  :root {
+    --logos-pad: 120px;     /* room the title should keep clear */
+    --logo-main-h: 22px;    /* shrink both logos together */
+  }
+}
+
+/* Narrow: hide both logos together and give title full width */
+@media (max-width: 820px) {
+  .navbar-logos { display: none !important; }       /* hide container, not each img */
+  .navbar-head { padding-right: 0 !important; }     /* no reserved space */
+  .navbar-head .brand { max-width: 100% !important; }
 }
 
 
@@ -160,19 +150,56 @@ hr {
   gap: 8px;
   user-select: none;
 }
-.filter-group > summary::-webkit-details-marker { display: none; }
 
+/* Custom carets & reset native marker for ALL details */
+details > summary::-webkit-details-marker { display: none; }
+details > summary::marker { content: ""; }
+details > summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background-color .15s ease, color .15s ease;
+}
+details > summary:hover,
+details > summary:focus-visible {
+  background: var(--surface-2);
+  outline: 1px solid var(--border);
+}
+details > summary::before {
+  content: "▶";
+  margin-right: 4px;
+  transform: rotate(0deg);
+  transform-origin: 50% 50%;
+  transition: transform .18s ease, color .18s ease;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+details[open] > summary::before { transform: rotate(90deg); color: var(--accent); }
+details[open] > summary { color: var(--text); }
+
+/* Badge pill — keep the yellow background everywhere it appears */
 .badge {
   display: inline-block;
   min-width: 18px;
   padding: 2px 6px;
   font-size: 12px;
   line-height: 1;
-  color: #0e1117;
-  background: var(--warn);
   border-radius: 10px;
   margin-left: 6px;
+
+  /* enforce the look */
+  background: var(--warn) !important;
+  color: #0e1117 !important;
 }
+
+/* If a summary/link attempts to tint children, keep badges yellow */
+.filter-summary .badge,
+.collapsible-summary .badge { background: var(--warn) !important; color: #0e1117 !important; }
+
+
 
 /* Filters layout */
 .filters-grid {
@@ -211,35 +238,6 @@ hr {
   margin-top: 8px;
   border-top: 1px solid var(--border);
 }
-
-/* Custom carets for all <details> */
-details > summary::-webkit-details-marker { display: none; }
-details > summary::marker { content: ""; }
-details > summary {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  transition: background-color .15s ease, color .15s ease;
-}
-details > summary:hover,
-details > summary:focus-visible {
-  background: var(--surface-2);
-  outline: 1px solid var(--border);
-}
-details > summary::before {
-  content: "▶";
-  margin-right: 4px;
-  transform: rotate(0deg);
-  transform-origin: 50% 50%;
-  transition: transform .18s ease, color .18s ease;
-  color: var(--text-dim);
-  font-size: 0.9rem;
-}
-details[open] > summary::before { transform: rotate(90deg); color: var(--accent); }
-details[open] > summary { color: var(--text); }
 
 /* ================================
    Page container
@@ -408,8 +406,8 @@ details[open] > summary { color: var(--text); }
   --ag-foreground-color: var(--text);
   --ag-border-color: var(--border);
   --ag-row-hover-color: rgba(255,255,255,0.04);
-  --ag-header-height: 56px;            /* slightly bigger for wrapped headers */
-  --ag-floating-filters-height: 40px;  /* comfy under wrapped headers */
+  --ag-header-height: 56px;
+  --ag-floating-filters-height: 40px;
 }
 .ag-theme-alpine-dark .ag-header {
   box-shadow: 0 1px 0 rgba(255,255,255,0.06), 0 6px 12px rgba(0,0,0,0.12);
@@ -460,8 +458,6 @@ details[open] > summary { color: var(--text); }
 
 /* ================================
    Dropdown readability (global)
-   – keep menu readable on dark theme,
-     but avoid overriding chip wrapping above
 =================================== */
 
 .Select-menu-outer {
