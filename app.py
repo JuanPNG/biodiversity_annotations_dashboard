@@ -1,6 +1,7 @@
 from dash import Dash, html, dcc
 import dash
 from layouts.navbar import get_navbar
+from layouts.footer import get_footer
 import os
 
 app = Dash(
@@ -23,6 +24,7 @@ app_shell = html.Div(
         dcc.Store(id="global-filters", storage_type="memory"),
         get_navbar(),
         dash.page_container,
+        get_footer(),
     ],
     className="app-root",
 )
