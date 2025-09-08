@@ -99,7 +99,7 @@ hr {
   right: 12px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 27px;
   flex-wrap: nowrap;
 }
 .navbar-logos img {
@@ -127,6 +127,18 @@ hr {
   .navbar-head .brand { max-width: 100% !important; }
 }
 
+/* Make the main logo readable on dark background */
+.navbar-logos .navbar-logo {
+  background: #f4f6fa;        /* light badge behind transparent PNG/SVG */
+  padding: 1px 1px;           /* breathing room around the glyph */
+  border-radius: 20px;         /* soft pill shape */
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.12) inset, 0 1px 2px rgba(0,0,0,0.25);
+}
+
+/* Slightly tighter padding when logos shrink on tablets */
+@media (max-width: 900px) {
+  .navbar-logos .navbar-logo { padding: 2px 6px; border-radius: 6px; }
+}
 
 /* ================================
    Collapsible Groups (Filters)
