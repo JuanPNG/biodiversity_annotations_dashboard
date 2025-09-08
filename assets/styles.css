@@ -21,6 +21,9 @@
   /* Navbar logos & padding */
   --logos-pad: 180px;   /* space reserved on the right for the logos */
   --logo-main-h: 40px;  /* height for both logos */
+  /* target banner width on desktop */
+  --footer-banner-w: 560px;
+  --footer-banner-pad: 6px 10px;
 }
 
 html, body {
@@ -490,6 +493,71 @@ details[open] > summary { color: var(--text); }
 .Select--multi .Select-value-label { color: var(--text) !important; font-size: 0.9rem !important; }
 .Select--multi .Select-value-icon { color: var(--text-dim) !important; }
 .Select--multi .Select-value-icon:hover { color: var(--danger) !important; }
+
+/* ================================
+   Footer (site-wide sticky banner)
+=================================== */
+
+.site-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+
+  /* change from row to column so the banner sits below the contact row */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+/* Top row (we already used .footer-left before; keep it) */
+.footer-left {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+}
+.footer-left a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.footer-banner {
+  border-top: 1px solid var(--border);
+  padding-top: 20px;
+  padding-bottom: 13px;
+  display: flex;
+  justify-content: center;
+}
+.footer-banner-img {
+  /* smaller, centered, and readable on dark bg */
+  width: min(100%, var(--footer-banner-w));
+  height: auto;
+  display: block;
+  background: #f4f6fa;                 /* light badge behind the image */
+  padding: var(--footer-banner-pad);
+  border-radius: 0;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.12) inset, 0 1px 2px rgba(0,0,0,0.25);
+  opacity: 0.98;
+  margin: 0 auto;
+}
+
+/* On narrow screens let it breathe and reduce padding a touch */
+@media (max-width: 720px) {
+  :root { --footer-banner-w: 96%; --footer-banner-pad: 4px 8px; }
+}
+
+
+/* Optional: stack tighter on small screens */
+@media (max-width: 700px) {
+  .site-footer { gap: 6px; }
+}
+
 
 /* ================================
    Misc
