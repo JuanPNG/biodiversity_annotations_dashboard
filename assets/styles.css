@@ -307,6 +307,54 @@ hr {
   border-radius: 8px; background-clip: padding-box; background: rgba(255,255,255,0.24);
 }
 
+/* === Data Browser: column selector chips should wrap instead of truncating === */
+/* 1) The wrapper must allow wrapping to multiple rows */
+#db-columns .Select-multi-value-wrapper {
+  display: flex;
+  flex-wrap: wrap;          /* allow chips to wrap */
+  gap: 2px;                 /* tidy spacing (you can reduce if you like) */
+}
+
+/* 2) Each chip should not be hard-capped and should permit text to wrap */
+#db-columns .Select--multi .Select-value {
+  max-width: none !important;     /* remove width clamp */
+  white-space: normal !important; /* allow wrapping within chip */
+  display: inline-flex;           /* keep close icon aligned */
+  align-items: center;
+  line-height: 1.25;
+  padding: 2px 6px;               /* compact padding for long text */
+}
+
+/* 3) Remove ellipsis truncation on the label element inside the chip */
+#db-columns .Select--multi .Select-value-label {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+
+/* 4) Let the control height grow as chips wrap; avoid clipping the second row */
+#db-columns .Select-control {
+  min-height: 38px;        /* comfy minimum height */
+  height: auto !important; /* let it grow with content */
+}
+
+/* 5) Make the input line wrap as well (prevents horizontal expansion-only) */
+#db-columns .Select-input > input {
+  white-space: normal !important;
+}
+
+/* === AG Grid: allow multi-line header labels and give them a little room === */
+.ag-theme-alpine-dark .ag-header-cell-label {
+  white-space: normal;   /* wrap header text */
+  line-height: 1.2;
+}
+
+/* Slightly taller header to comfortably fit 2 lines when needed */
+.ag-theme-alpine-dark {
+  --ag-header-height: 56px;           /* default; autoHeaderHeight will expand beyond this if needed */
+  --ag-floating-filters-height: 40px; /* keep filters comfy under wrapped headers */
+}
+
 
 /* ================================
    Misc
