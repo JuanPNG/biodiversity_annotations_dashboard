@@ -484,7 +484,7 @@ def db_make_column_defs(df: pd.DataFrame) -> list[dict]:
     defs: list[dict] = []
     for col in df.columns:
         header = ui_label_for_column(col)
-        c = {"headerName": header, "field": col}
+        c = {"headerName": header, "field": col, "headerTooltip": header}
         if col in url_cols:
             c.update({
                 "cellRenderer": "markdown",
