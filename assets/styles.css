@@ -38,7 +38,7 @@ hr {
   margin: 16px 0;
 }
 
-/* Root container (from app.py) */
+/* Root container */
 .app-root {
   max-width: 1280px;
   margin: 0 auto;
@@ -46,7 +46,7 @@ hr {
 }
 
 /* ================================
-   Navbar  Links
+   Navbar & Links
 =================================== */
 
 .navbar {
@@ -60,9 +60,8 @@ hr {
 }
 
 .brand {
-  font-size: 1.35rem;
+  font-size: 1.35rem; /* agreed-sized brand */
   font-weight: 700;
-  opacity: 1;
   margin-bottom: 10px;
   color: var(--text);
 }
@@ -85,7 +84,7 @@ hr {
 .nav-link:hover { background: var(--surface-3); }
 
 /* ================================
-   Collapsible Filter Groups
+   Collapsible Groups (Filters)
 =================================== */
 
 .filter-group {
@@ -106,7 +105,6 @@ hr {
   gap: 8px;
   user-select: none;
 }
-
 .filter-group > summary::-webkit-details-marker { display: none; }
 
 .badge {
@@ -121,11 +119,7 @@ hr {
   margin-left: 6px;
 }
 
-/* Grid holding inner filter controls */
-.filters-row {
-  padding: 10px;
-}
-
+/* Filters layout */
 .filters-grid {
   display: grid;
   gap: 10px;
@@ -144,7 +138,7 @@ hr {
   color: var(--text-dim);
 }
 
-/* Reset buttons */
+/* Reset buttons + toolbar */
 .btn-reset {
   padding: 8px 10px;
   border-radius: 10px;
@@ -153,10 +147,8 @@ hr {
   color: var(--text);
   cursor: pointer;
 }
-.btn-reset:hover {
-  background: var(--surface-3);
-  border-color: var(--border);
-}
+.btn-reset:hover { background: var(--surface-3); border-color: var(--border); }
+
 .filters-toolbar {
   display: flex;
   justify-content: flex-start;
@@ -165,8 +157,37 @@ hr {
   border-top: 1px solid var(--border);
 }
 
+/* Custom carets for all <details> */
+details > summary::-webkit-details-marker { display: none; }
+details > summary::marker { content: ""; }
+details > summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background-color .15s ease, color .15s ease;
+}
+details > summary:hover,
+details > summary:focus-visible {
+  background: var(--surface-2);
+  outline: 1px solid var(--border);
+}
+details > summary::before {
+  content: "▶";
+  margin-right: 4px;
+  transform: rotate(0deg);
+  transform-origin: 50% 50%;
+  transition: transform .18s ease, color .18s ease;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+details[open] > summary::before { transform: rotate(90deg); color: var(--accent); }
+details[open] > summary { color: var(--text); }
+
 /* ================================
-   Page containers
+   Page container
 =================================== */
 
 .page-container {
@@ -177,10 +198,57 @@ hr {
   box-shadow: var(--shadow);
 }
 
+/* Top H1 inside a page */
+.page-container > h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+/* ================================
+   Home / Prose / Intro
+=================================== */
+
+.home-section {
+  margin: 12px 0 22px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.home-section:last-of-type { border-bottom: none; }
+
+.home-section-title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.prose {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.prose p { margin: 0 0 0.6rem; }
+.prose ul, .prose ol { margin: 0.25rem 0 0.6rem; padding-left: 1.2rem; }
+.prose li { margin: 0.2rem 0; }
+.prose a { color: var(--accent); text-underline-offset: 2px; text-decoration: underline; }
+.prose strong, .prose b { color: var(--text); font-weight: 600; }
+.prose ul > li::marker, .prose ol > li::marker { color: rgba(255,255,255,0.5); }
+
+.intro-text {
+  margin: 6px 0 10px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.intro-text a { color: var(--accent); font-weight: 500; }
+
+.contact-block { margin-top: 8px; }
+.contact-block a { color: var(--accent); font-weight: 500; }
+
 /* ================================
    KPI Grid (Home)
-   - Horizontal flow, responsive
-   - Title (label) on top, number below
 =================================== */
 
 .kpi-grid {
@@ -189,7 +257,6 @@ hr {
   gap: 16px;
   margin: 20px 0;
 }
-
 .kpi-card {
   background: var(--surface-2);
   border: 1px solid var(--border);
@@ -197,19 +264,17 @@ hr {
   padding: 12px 14px;
   text-align: center;
   display: flex;
-  flex-direction: column;   /* label above number */
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 86px;
 }
-
 .kpi-label {
   font-size: 0.9rem;
   font-weight: 600;
   color: var(--text-dim);
-  margin-bottom: 6px;       /* spacing above number */
+  margin-bottom: 6px;
 }
-
 .kpi-card h3 {
   margin: 0;
   font-size: 1.6rem;
@@ -217,18 +282,13 @@ hr {
   letter-spacing: 0.2px;
   color: var(--text);
 }
-
 .kpi-subtext {
   font-size: 0.9rem;
   color: var(--text-dim);
   line-height: 1.35;
   text-align: center;
 }
-
-/* Make the "Top gene biotypes" card span wider on medium+ screens */
-@media (min-width: 720px) {
-  .kpi-card--wide { grid-column: span 2; }
-}
+@media (min-width: 720px) { .kpi-card--wide { grid-column: span 2; } }
 
 /* ================================
    Home Navigation Cards
@@ -240,9 +300,7 @@ hr {
   gap: 12px;
   margin-top: 12px;
 }
-
 .nav-card-link { text-decoration: none; }
-
 .nav-card {
   padding: 14px 16px;
   border-radius: 14px;
@@ -255,300 +313,15 @@ hr {
   flex-direction: column;
   justify-content: center;
 }
-
 .nav-card:hover { transform: translateY(-1px); box-shadow: 0 6px 22px rgba(0,0,0,0.32); }
 .nav-card .card-title { font-weight: 600; font-size: 1.05rem; margin-bottom: 2px; color: var(--text); }
 .nav-card .card-sub { opacity: .78; font-size: .9rem; color: var(--text-dim); }
-
 .nav-card--disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* ================================
-   AG Grid
+   Biotype vs Environment layout
 =================================== */
 
-.ag-theme-alpine-dark, .ag-theme-alpine {
-  /* your theme colors remain */
-  --ag-background-color: var(--surface-1);
-  --ag-foreground-color: var(--text);
-  --ag-border-color: var(--border);
-  --ag-row-hover-color: rgba(255,255,255,0.04);
-
-  /* make room so nothing gets clipped */
-  --ag-header-height: 44px;               /* column header row */
-  --ag-floating-filters-height: 44px;     /* floating filter row */
-}
-
-/* Give header a subtle divider so it feels 'fixed' while body scrolls */
-.ag-theme-alpine-dark .ag-header {
-  box-shadow: 0 1px 0 rgba(255,255,255,0.06), 0 6px 12px rgba(0,0,0,0.12);
-  background-color: var(--surface-1);
-}
-
-/* Comfortable filter input height */
-.ag-theme-alpine-dark .ag-floating-filter input,
-.ag-theme-alpine-dark .ag-floating-filter .ag-input-field-input {
-  height: 28px;
-  line-height: 28px;
-  padding: 2px 8px;
-}
-
-/* Keep scrollbars obvious inside the grid viewport */
-#db-grid .ag-root-wrapper,
-#db-grid .ag-root-wrapper-body,
-#db-grid .ag-body-viewport,
-#db-grid .ag-center-cols-viewport {
-  overflow: auto !important;
-}
-
-/* (Optional) slightly clearer scrollbars on WebKit */
-#db-grid .ag-body-viewport::-webkit-scrollbar,
-#db-grid .ag-center-cols-viewport::-webkit-scrollbar { width: 10px; height: 10px; }
-#db-grid .ag-body-viewport::-webkit-scrollbar-thumb,
-#db-grid .ag-center-cols-viewport::-webkit-scrollbar-thumb {
-  border-radius: 8px; background-clip: padding-box; background: rgba(255,255,255,0.24);
-}
-
-/* === Data Browser: column selector chips should wrap instead of truncating === */
-/* 1) The wrapper must allow wrapping to multiple rows */
-#db-columns .Select-multi-value-wrapper {
-  display: flex;
-  flex-wrap: wrap;          /* allow chips to wrap */
-  gap: 2px;                 /* tidy spacing (you can reduce if you like) */
-}
-
-/* 2) Each chip should not be hard-capped and should permit text to wrap */
-#db-columns .Select--multi .Select-value {
-  max-width: none !important;     /* remove width clamp */
-  white-space: normal !important; /* allow wrapping within chip */
-  display: inline-flex;           /* keep close icon aligned */
-  align-items: center;
-  line-height: 1.25;
-  padding: 2px 6px;               /* compact padding for long text */
-}
-
-/* 3) Remove ellipsis truncation on the label element inside the chip */
-#db-columns .Select--multi .Select-value-label {
-  white-space: normal !important;
-  overflow: visible !important;
-  text-overflow: clip !important;
-}
-
-/* 4) Let the control height grow as chips wrap; avoid clipping the second row */
-#db-columns .Select-control {
-  min-height: 38px;        /* comfy minimum height */
-  height: auto !important; /* let it grow with content */
-}
-
-/* 5) Make the input line wrap as well (prevents horizontal expansion-only) */
-#db-columns .Select-input > input {
-  white-space: normal !important;
-}
-
-/* === AG Grid: allow multi-line header labels and give them a little room === */
-.ag-theme-alpine-dark .ag-header-cell-label {
-  white-space: normal;   /* wrap header text */
-  line-height: 1.2;
-}
-
-/* Slightly taller header to comfortably fit 2 lines when needed */
-.ag-theme-alpine-dark {
-  --ag-header-height: 56px;           /* default; autoHeaderHeight will expand beyond this if needed */
-  --ag-floating-filters-height: 40px; /* keep filters comfy under wrapped headers */
-}
-
-
-/* ================================
-   Misc
-=================================== */
-
-.dash-graph, .js-plotly-plot {
-  background: var(--surface-1) !important;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-}
-
-/* RangeSlider tweaks: ensure ticks don’t clutter */
-.rc-slider-mark-text {
-  color: var(--text-dim) !important;
-  font-size: 0.6rem;
-}
-.rc-slider-dot {
-  border-color: transparent !important; /* hide little dots per step */
-}
-
-/* --- Home sections (structure + spacing) --- */
-.home-section {
-  margin: 12px 0 22px;
-  padding-bottom: 6px;
-  border-bottom: 1px solid var(--border);
-}
-.home-section:last-of-type { border-bottom: none; }
-
-.home-section-title {
-  margin: 0 0 8px;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-.home-section-body {
-  opacity: 0.92;
-  line-height: 1.6;
-}
-
-/* Contact block (kept subtle) */
-.contact-block { margin-top: 8px; }
-.contact-block a { color: var(--accent); font-weight: 500; }
-
-/* Intro section on Home */
-.intro-text {
-  margin: 6px 0 10px;
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--text-dim);
-}
-.intro-text a {
-  color: var(--accent);
-  font-weight: 500;
-}
-
-/* --- Prose: consistent body copy in dark theme --- */
-.prose {
-  font-size: 1rem;
-  line-height: 1.6;
-  color: var(--text-dim);
-}
-
-.prose p {
-  margin: 0 0 0.6rem;
-}
-
-.prose ul,
-.prose ol {
-  margin: 0.25rem 0 0.6rem;
-  padding-left: 1.2rem;  /* a bit more indent for readability */
-}
-
-.prose li {
-  margin: 0.2rem 0;
-}
-
-.prose a {
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.prose strong,
-.prose b {
-  color: var(--text);
-  font-weight: 600;
-}
-
-/* Optional: slightly dim bullets for a softer look in dark mode */
-.prose ul > li::marker,
-.prose ol > li::marker {
-  color: rgba(255,255,255,0.5);
-}
-
-/* --- Home sections (structure + spacing) --- */
-.home-section {
-  margin: 12px 0 22px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
-}
-.home-section:last-of-type { border-bottom: none; }
-
-.home-section-title {
-  margin: 0 0 8px;
-  font-size: 1.2rem;
-  font-weight: 600;
-}
-
-/* Consistent body copy for dark theme */
-.prose {
-  font-size: 0.95rem;
-  line-height: 1.6;
-  color: var(--text-dim);
-}
-.prose p { margin: 0 0 0.6rem; }
-.prose ul { margin: 0.25rem 0 0.6rem; padding-left: 1.2rem; }
-.prose li { margin: 0.2rem 0; }
-.prose a { color: var(--accent); text-underline-offset: 2px; text-decoration: underline; }
-
-/* Hero title (top H1 on Home) */
-.page-container > h1 {
-  font-size: 2rem;       /* bigger than subsection titles */
-  font-weight: 700;
-  margin-bottom: 12px;
-  color: var(--text);
-}
-
-/* Subsection titles (H2/H3 on Home) */
-.home-section-title {
-  margin: 0 0 8px;
-  font-size: 1.25rem;    /* keep smaller than H1 */
-  font-weight: 600;
-  color: var(--text);
-}
-
-
-
-/* ================================
-   Collapsible Carets + Hover/Focus
-   Works with nested <details> (e.g., Data filters → Taxonomy/Env/Biotype)
-=================================== */
-
-/* Hide the browser’s default marker */
-details > summary::-webkit-details-marker { display: none; }
-details > summary::marker { content: ""; }
-
-/* Summary row hit area + baseline look */
-details > summary {
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  transition: background-color .15s ease, color .15s ease;
-}
-
-/* Subtle hover/focus to communicate clickability */
-details > summary:hover,
-details > summary:focus-visible {
-  background: var(--surface-2);
-  outline: 1px solid var(--border);
-}
-
-/* Custom caret before the text */
-details > summary::before {
-  content: "▶";
-  display: inline-block;
-  margin-right: 4px;
-  transform: rotate(0deg);            /* important: explicit baseline */
-  transform-origin: 50% 50%;
-  transition: transform .18s ease, color .18s ease;
-  color: var(--text-dim);
-  font-size: 0.9rem;
-}
-
-/* Rotate only the caret for THIS <details> (fixes nested rotation) */
-details[open] > summary::before {
-  transform: rotate(90deg);
-  color: var(--accent);
-}
-
-/* Optional: slightly brighten label on open */
-details[open] > summary {
-  color: var(--text);
-}
-
-/* If you use .filter-summary (existing class), keep its layout tidy */
-.filter-summary {
-  padding: 10px 12px;  /* consistent with summary rule above */
-}
-
-/* ========= Biotype vs Environment layout ========= */
 .viz-split {
   display: grid;
   grid-template-columns: 280px 1fr;
@@ -569,30 +342,81 @@ details[open] > summary {
   font-weight: 600;
   color: var(--text);
 }
-@media (max-width: 900px) {
-  .viz-split { grid-template-columns: 1fr; }
-}
+@media (max-width: 900px) { .viz-split { grid-template-columns: 1fr; } }
 
 /* ================================
-   Dropdown readability fixes
+   AG Grid
 =================================== */
 
-/* Options menu: white background with dark readable text */
+.ag-theme-alpine-dark, .ag-theme-alpine {
+  --ag-background-color: var(--surface-1);
+  --ag-foreground-color: var(--text);
+  --ag-border-color: var(--border);
+  --ag-row-hover-color: rgba(255,255,255,0.04);
+  --ag-header-height: 56px;            /* slightly bigger for wrapped headers */
+  --ag-floating-filters-height: 40px;  /* comfy under wrapped headers */
+}
+.ag-theme-alpine-dark .ag-header {
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06), 0 6px 12px rgba(0,0,0,0.12);
+  background-color: var(--surface-1);
+}
+.ag-theme-alpine-dark .ag-floating-filter input,
+.ag-theme-alpine-dark .ag-floating-filter .ag-input-field-input {
+  height: 28px;
+  line-height: 28px;
+  padding: 2px 8px;
+}
+/* Keep scrollbars obvious inside the grid viewport */
+#db-grid .ag-root-wrapper,
+#db-grid .ag-root-wrapper-body,
+#db-grid .ag-body-viewport,
+#db-grid .ag-center-cols-viewport {
+  overflow: auto !important;
+}
+#db-grid .ag-body-viewport::-webkit-scrollbar,
+#db-grid .ag-center-cols-viewport::-webkit-scrollbar { width: 10px; height: 10px; }
+#db-grid .ag-body-viewport::-webkit-scrollbar-thumb,
+#db-grid .ag-center-cols-viewport::-webkit-scrollbar-thumb {
+  border-radius: 8px; background-clip: padding-box; background: rgba(255,255,255,0.24);
+}
+/* Allow multi-line header labels */
+.ag-theme-alpine-dark .ag-header-cell-label {
+  white-space: normal;
+  line-height: 1.2;
+}
+
+/* Data Browser: column selector chips should WRAP (scoped to #db-columns) */
+#db-columns .Select-multi-value-wrapper { display: flex; flex-wrap: wrap; gap: 2px; }
+#db-columns .Select--multi .Select-value {
+  max-width: none !important;
+  white-space: normal !important;
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.25;
+  padding: 2px 6px;
+}
+#db-columns .Select--multi .Select-value-label {
+  white-space: normal !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+}
+#db-columns .Select-control { min-height: 38px; height: auto !important; }
+#db-columns .Select-input > input { white-space: normal !important; }
+
+/* ================================
+   Dropdown readability (global)
+   – keep menu readable on dark theme,
+     but avoid overriding chip wrapping above
+=================================== */
+
 .Select-menu-outer {
   background: #ffffff !important;
   color: #111111 !important;
   border: 1px solid var(--border) !important;
 }
-.Select-option {
-  background: #ffffff !important;
-  color: #111111 !important;
-}
-.Select-option.is-focused {
-  background: var(--surface-2) !important;
-  color: var(--text) !important;
-}
+.Select-option { background: #ffffff !important; color: #111111 !important; }
+.Select-option.is-focused { background: var(--surface-2) !important; color: var(--text) !important; }
 
-/* Selected chips in MULTI-selects only: dark pill with light text */
 .Select--multi .Select-value {
   background: var(--surface-2) !important;
   border: 1px solid var(--border) !important;
@@ -600,19 +424,20 @@ details[open] > summary {
   padding: 2px 6px !important;
   margin: 2px !important;
 }
-.Select--multi .Select-value-label {
-  color: var(--text) !important;
-  font-size: 0.9rem !important;
-  display: inline-block !important;
-  max-width: 140px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  vertical-align: middle !important;
+.Select--multi .Select-value-label { color: var(--text) !important; font-size: 0.9rem !important; }
+.Select--multi .Select-value-icon { color: var(--text-dim) !important; }
+.Select--multi .Select-value-icon:hover { color: var(--danger) !important; }
+
+/* ================================
+   Misc
+=================================== */
+
+.dash-graph, .js-plotly-plot {
+  background: var(--surface-1) !important;
+  border-radius: 12px;
+  border: 1px solid var(--border);
 }
-.Select--multi .Select-value-icon {
-  color: var(--text-dim) !important;
-}
-.Select--multi .Select-value-icon:hover {
-  color: var(--danger) !important;
-}
+
+/* RangeSlider tweaks */
+.rc-slider-mark-text { color: var(--text-dim) !important; font-size: 0.6rem; }
+.rc-slider-dot { border-color: transparent !important; }
