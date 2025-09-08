@@ -24,24 +24,24 @@ CLIMATE_LABEL_COL = "clim_bio1_mean" # Provisional
 # Keys are the actual column names in `dashboard_main.parquet`.
 COLUMN_LABELS: dict[str, str] = {
     # Climate variables
-    "clim_bio1_mean": "Annual Mean Temperature (°C, mean)",
-    "clim_bio1_max":  "Annual Mean Temperature (°C, max)",
-    "clim_bio1_min":  "Annual Mean Temperature (°C, min)",
-    "clim_bio12_mean": "Annual Precipitation (mm, mean)",
-    "clim_bio12_max": "Annual Precipitation (mm, max)",
-    "clim_bio12_min": "Annual Precipitation (mm, min)",
-    "clim_bio7_mean":  "Temperature Annual Range (°C, mean)",
-    "clim_bio7_max":  "Temperature Annual Range (°C, max)",
-    "clim_bio7_min":  "Temperature Annual Range (°C, min)",
-    "clim_bio15_mean": "Precipitation Seasonality (CV, mean)",
-    "clim_bio15_max": "Precipitation Seasonality (CV, max)",
-    "clim_bio15_min": "Precipitation Seasonality (CV, min)",
+    "clim_bio1_mean": " Mean Annual Mean Temperature (°C)",
+    "clim_bio1_max":  "Max Annual Mean Temperature (°C)",
+    "clim_bio1_min":  "Min Annual Mean Temperature (°C)",
+    "clim_bio12_mean": "Mean Annual Precipitation (mm)",
+    "clim_bio12_max": "Max Annual Precipitation (mm)",
+    "clim_bio12_min": "Min Annual Precipitation (mm)",
+    "clim_bio7_mean":  "Mean Temperature Annual Range (°C)",
+    "clim_bio7_max":  "Max Temperature Annual Range (°C)",
+    "clim_bio7_min":  "Min Temperature Annual Range (°C)",
+    "clim_bio15_mean": "Mean Precipitation Seasonality (CV)",
+    "clim_bio15_max": "Max Precipitation Seasonality (CV)",
+    "clim_bio15_min": "Min Precipitation Seasonality (CV)",
 
     # Distribution variables
     "range_km2": "Distribution Range Size (km², EOO)",
     "mean_elevation": "Mean Elevation (m)",
-    "min_elevation": "Minimum Elevation (m)",
-    "max_elevation": "Maximum Elevation (m)",
+    "min_elevation": "Min Elevation (m)",
+    "max_elevation": "Max Elevation (m)",
     "median_elevation": "Median Elevation (m)",
 }
 
