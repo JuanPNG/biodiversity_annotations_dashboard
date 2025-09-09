@@ -37,3 +37,33 @@ def update_filter_badges(gf):
 
     total = tax_count + climate_count + biogeo_count + bio_pct_count
     return str(tax_count), str(climate_count), str(biogeo_count), str(bio_pct_count), str(total)
+
+# --- Active nav link highlight ---
+@callback(
+    Output("nav-home", "className"),
+    Output("nav-data", "className"),
+    Output("nav-ga", "className"),
+    Output("nav-be", "className"),
+    Input("url", "pathname"),
+    prevent_initial_call=False,
+)
+def nav_active_class(pathname: str):
+    base = "nav-link"
+
+    def norm(p: str | None) -> str:
+        p = (p or "/").rstrip("/")
+        return p or "/"
+
+    path = norm(pathname)
+
+    def cls_for(target: str) -> str:
+        t = norm(target)
+        is_active = (t == "/" and path == "/") or (t != "/" and path.startswith(t))
+        return f"{base} active" if is_active else base
+
+    return (
+        cls_for("/"),
+        cls_for("/data-browser"),
+        cls_for("/genome-annotations"),
+        cls_for("/biotype-environment"),
+    )

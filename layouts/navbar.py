@@ -52,10 +52,10 @@ def _slider_from_col(label: str | None, slider_id: str, col: str, fallback: tupl
 
 def get_navbar() -> html.Header:
     links = [
-        dcc.Link("Home", href="/", className="nav-link"),
-        dcc.Link("Data Browser", href="/data-browser", className="nav-link"),
-        dcc.Link("Genome Annotations", href="/genome-annotations", className="nav-link"),
-        dcc.Link("Biotype vs Environment", href="/biotype-environment", className="nav-link"),
+        dcc.Link("Home", href="/", id="nav-home", className="nav-link"),
+        dcc.Link("Data Browser", href="/data-browser", id="nav-data", className="nav-link"),
+        dcc.Link("Genome Annotations", href="/genome-annotations", id="nav-ga", className="nav-link"),
+        dcc.Link("Biotype vs Environment", href="/biotype-environment", id="nav-be", className="nav-link"),
     ]
 
     # --- TAXONOMY (same IDs as before) ---
