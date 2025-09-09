@@ -26,6 +26,37 @@
   --footer-banner-pad: 6px 10px;
 }
 
+/*TODO: Create light theme */
+/*!* Light theme tokens — opt-in by setting data-theme="light" on .app-root *!*/
+/*.app-root[data-theme="light"] {*/
+/*  --bg: #f7f8fa;*/
+/*  --surface-1: #ffffff;*/
+/*  --surface-2: #f4f6fa;*/
+/*  --surface-3: #e9edf5;*/
+/*  --text: #12141a;*/
+/*  --text-dim: #5a6272;*/
+/*  --accent: #2563eb;            !* optional: slightly deeper blue on light *!*/
+/*  --accent-2: #7c3aed;*/
+/*  --ok: #1a7f37;*/
+/*  --warn: #f7c948;*/
+/*  --danger: #d64545;*/
+/*  --border: rgba(0,0,0,0.12);*/
+/*  --border-2: rgba(0,0,0,0.18);*/
+/*  --shadow: 0 6px 18px rgba(0,0,0,0.08);*/
+/*}*/
+
+/*!* Light theme: logo badge not needed *!*/
+/*.app-root[data-theme="light"] .navbar-logos .navbar-logo {*/
+/*  background: transparent;*/
+/*  box-shadow: none;*/
+/*  padding: 0;*/
+/*}*/
+
+/*!* Optional: slightly softer dropdown border on light *!*/
+/*.app-root[data-theme="light"] .Select-menu-outer {*/
+/*  border-color: rgba(0,0,0,0.12) !important;*/
+/*}*/
+
 html, body {
   margin: 0;
   padding: 0;

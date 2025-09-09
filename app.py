@@ -27,6 +27,9 @@ app_shell = html.Div(
         get_footer(),
     ],
     className="app-root",
+    # TODO: Implement switch to light theme.
+    id="app-root",
+    **{"data-theme": "dark"},  # change to "light"
 )
 
 app.layout = app_shell
