@@ -276,6 +276,7 @@ details[open] > summary { color: var(--text); }
   border-radius: 12px;
   padding: 16px;
   box-shadow: var(--shadow);
+  margin-bottom: 16px;
 }
 
 /* Top H1 inside a page */
