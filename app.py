@@ -11,11 +11,15 @@ app = Dash(
     title="Exploring Genome Annotations in Ecological Context",
 )
 
-server = app.server
+try:
+    server = app.server
+except NameError:
+    raise RuntimeError("Expected Dash 'app' to exist and expose 'server'.")
+
 # --- Health check for Cloud Run / load balancers ---
-@server.get("/healthz")
+@server.route("/healthz", methods=["GET", "HEAD"])
 def healthz():
-    return "ok", 200
+    return "ok", 200, {"Content-Type": "text/plain"}
 
 # --- Main shell ---
 app_shell = html.Div(
