@@ -172,7 +172,7 @@ def init_biotype_pct_options(_):
     Input("filter-tax-species", "value"),
     Input("filter-tax-id", "value"),
 
-    # Climate categorical
+    # Climate categorical  # TODO: add koppen classification
     Input("filter-climate", "value"),
 
     # Biogeo categorical
@@ -201,7 +201,7 @@ def init_biotype_pct_options(_):
 )
 def sync_global_store(
     tax_kingdom, tax_phylum, tax_class, tax_order, tax_family, tax_genus, tax_species, tax_id,
-    climate_labels,
+    climate_labels,  # For Koppen classification
     bio_levels, bio_values,
     bio1_val, bio1_min, bio1_max,
     bio12_val, bio12_min, bio12_max,
@@ -235,7 +235,7 @@ def sync_global_store(
 
     store = gf_build_store(
         taxonomy_map=taxonomy_map,
-        climate_labels=gf_clean_list(climate_labels),
+        climate_labels=gf_clean_list(climate_labels),  # For Koppen classification
         bio_levels=gf_clean_list(bio_levels),
         bio_values=gf_clean_list(bio_values),
         climate_ranges=climate_ranges,
@@ -267,7 +267,7 @@ def reset_taxonomy(n):
     return (empty, empty, empty, empty, empty, empty, empty, empty)
 
 @callback(
-    Output("filter-climate", "value", allow_duplicate=True),
+    Output("filter-climate", "value", allow_duplicate=True), # For Koppen classification
     Output("climate-range-clim_bio1_mean", "value", allow_duplicate=True),
     Output("climate-range-clim_bio12_mean", "value", allow_duplicate=True),
     Input("btn-reset-climate", "n_clicks"),
@@ -319,7 +319,7 @@ def reset_biotype_pct(n):
     Output("filter-tax-species", "value", allow_duplicate=True),
     Output("filter-tax-id", "value", allow_duplicate=True),
     # climate + ranges
-    Output("filter-climate", "value", allow_duplicate=True),
+    Output("filter-climate", "value", allow_duplicate=True), # For Koppen classification
     Output("climate-range-clim_bio1_mean", "value", allow_duplicate=True),
     Output("climate-range-clim_bio12_mean", "value", allow_duplicate=True),
     # biogeo + range
