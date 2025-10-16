@@ -242,7 +242,7 @@ def get_navbar() -> html.Header:
     # annual precipitation). Full-span == “no filter” → omitted from store.
     # Global store key: "climate_ranges"
     # Reset handled by btn-reset-climate (shared).
-    # (ALSO) Dropdown for selecting climate categories (e.g., Köppen labels). TODO
+    # (ALSO) Dropdown for selecting climate categories (e.g., Köppen labels). TODO:  Add Koppen categorical climate
     # Global store key: "climate"
     # Currently placeholder if categorical labels not yet implemented.
     # Reset button: btn-reset-climate
@@ -365,6 +365,8 @@ def get_navbar() -> html.Header:
     )
 
     # --- SUPER-GROUP: Data filters  ---
+    # Groups all filter sections and badges. Controls global-filters store content.
+    # Reset All button clears all sub-groups.
     data_filters_group = html.Details(
         [
             html.Summary(
