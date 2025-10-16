@@ -130,6 +130,7 @@ def get_navbar() -> html.Header:
             ),
             html.Div(
                 [
+                    # TODO: Add Koppen categorical climate
                     html.Div(
                         [html.Label("Climate (categorical)", className="control-label"),
                          dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")],
