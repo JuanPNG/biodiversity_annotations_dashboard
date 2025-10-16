@@ -6,109 +6,9 @@ dash.register_page(__name__, path="/", name="Home")
 
 from dash import dcc, html
 
-nav_cards = html.Div(
-    [
-        dcc.Link(
-            html.Div(
-                [html.Div("Data Browser", className="card-title"),
-                 html.Div("Browse and filter rows with server-side paging.", className="card-sub")],
-                className="nav-card"
-            ),
-            href="/data-browser",
-            className="nav-card-link",
-        ),
-        dcc.Link(
-            html.Div(
-                [html.Div("Genome Annotations", className="card-title"),
-                 html.Div("Stacked % by biotype with drilldown.", className="card-sub")],
-                className="nav-card"
-            ),
-            href="/genome-annotations",
-            className="nav-card-link",
-        ),
-        dcc.Link(
-            html.Div(
-                [html.Div("Biotype vs Environment", className="card-title"),
-                 html.Div("Scatterplots of biotypes against climate and distribution.", className="card-sub")],
-                className="nav-card"
-            ),
-            href="/biotype-environment",
-            className="nav-card-link",
-        ),
-        dcc.Link(
-            html.Div(
-                [html.Div("Maps (soon)", className="card-title"),
-                 html.Div("GBIF occurrences with clustering.", className="card-sub")],
-                className="nav-card nav-card--disabled"
-            ),
-            href="#",
-            className="nav-card-link",
-        ),
-    ],
-    className="nav-cards-grid",
-)
 
-# then include `nav_cards` in the layout where you want it:
-# layout = html.Main([... existing content ..., nav_cards, ...])
-
-
-
-# --- Navigation cards (unchanged, just reused below)
-nav_cards = html.Div(
-    [
-        dcc.Link(
-            html.Div(
-                [
-                    html.Div("Data Browser", className="card-title"),
-                    html.Div("Browse and filter rows with server-side paging.", className="card-sub"),
-                ],
-                className="nav-card",
-            ),
-            href="/data-browser",
-            className="nav-card-link",
-        ),
-        dcc.Link(
-            html.Div(
-                [
-                    html.Div("Genome Annotations", className="card-title"),
-                    html.Div("Stacked % by biotype with drilldown.", className="card-sub"),
-                ],
-                className="nav-card",
-            ),
-            href="/genome-annotations",
-            className="nav-card-link",
-        ),
-        dcc.Link(
-            html.Div(
-                [
-                    html.Div("Biotype vs Environment", className="card-title"),
-                    html.Div("Scatterplots of biotypes against climate and distribution.", className="card-sub"),
-                ],
-                className="nav-card",
-            ),
-            href="/biotype-environment",
-            className="nav-card-link",
-        ),
-        dcc.Link(
-            html.Div(
-                [
-                    html.Div("Maps (soon)", className="card-title"),
-                    html.Div("GBIF occurrences with clustering.", className="card-sub"),
-                ],
-                className="nav-card nav-card--disabled",
-            ),
-            href="#",
-            className="nav-card-link",
-        ),
-    ],
-    className="nav-cards-grid",
-)
-
-# --- Page layout (four sections)
-layout = html.Main(
-    [
-        # 1) Intro
-        html.Section(
+# Introduction
+intro = html.Section(
             [
                 html.H1("Welcome 👋", className="home-section-title"),
                 html.Div(
@@ -127,7 +27,7 @@ layout = html.Main(
                                 "We’d love your feedback — ",
                                 html.A(
                                     "share it with us here!",
-                                    href="https://example.com/survey",
+                                    href="https://docs.google.com/forms/d/1vZI2oT06ehqyheihsfVEL9Tnmz5RjxVUjLBsrqEpJX8/edit",
                                     target="_blank",
                                     rel="noopener",
                                 ),
@@ -138,10 +38,10 @@ layout = html.Main(
                 ),
             ],
             className="home-section",
-        ),
+        )
 
-        # 2) KPIs
-        html.Section(
+# KPIs: overview of filtered data.
+kpis = html.Section(
             [
                 html.H2("Key figures", className="home-section-title"),
                 dcc.Loading(
@@ -172,19 +72,62 @@ layout = html.Main(
                 ),
             ],
             className="home-section",
-        ),
+        )
 
-        # 3) Explore (bullets + nav cards)
-        html.Section(
+# Navigation cards
+nav_cards = html.Div(
+    [
+        dcc.Link(
+            html.Div(
+                [html.Div("Data Browser", className="card-title"),
+                 html.Div("Table with customisable fields.", className="card-sub")],
+                className="nav-card"
+            ),
+            href="/data-browser",
+            className="nav-card-link",
+        ),
+        dcc.Link(
+            html.Div(
+                [html.Div("Genome Annotations", className="card-title"),
+                 html.Div("Stacked % bar charts by biotype with drilldown.", className="card-sub")],
+                className="nav-card"
+            ),
+            href="/genome-annotations",
+            className="nav-card-link",
+        ),
+        dcc.Link(
+            html.Div(
+                [html.Div("Biotype vs Environment", className="card-title"),
+                 html.Div("Scatterplots of biotypes against climate and distribution.", className="card-sub")],
+                className="nav-card"
+            ),
+            href="/biotype-environment",
+            className="nav-card-link",
+        ),
+        dcc.Link(
+            html.Div(
+                [html.Div("Maps (soon)", className="card-title"),
+                 html.Div("GBIF occurrences & Biogeography", className="card-sub")],
+                className="nav-card nav-card--disabled"
+            ),
+            href="#",
+            className="nav-card-link",
+        ),
+    ],
+    className="nav-cards-grid",
+)
+
+# Pages short description and bottom navigation cards
+pages_desc = html.Section(
             [
                 html.H2("Explore the data", className="home-section-title"),
                 html.Div(
                     html.Ul(
                         [
-                            html.Li("Home — Overview & KPIs reflecting active filters."),
-                            html.Li("Data Browser — Table with server-side paging and column presets."),
-                            html.Li("Genome Annotations — Stacked % bars with drill up/down."),
-                            html.Li("Biotype vs Environment — Scatterplots linking biotypes with climate and distribution."),
+                            html.Li("Home — An overview of the filtered data."),
+                            html.Li("Data Browser — Explore the data in detail."),
+                            html.Li("Genome Annotations — Compare species within and between taxa."),
+                            html.Li("Biotype vs Environment — Examine the gene biotypes in relation to the species' environment and distribution."),
                         ],
                         className="home-section-body prose",
                     )
@@ -192,7 +135,18 @@ layout = html.Main(
                 nav_cards,
             ],
             className="home-section",
-        ),
+        )
+
+
+# Page layout (three sections)
+layout = html.Main(
+    [
+        # 1) Intro
+        intro,
+        # 2) KPIs
+        kpis,
+        # 3) Explore (bullets + nav cards)
+        pages_desc,
     ],
     className="page-container",
 )
