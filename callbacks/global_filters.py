@@ -14,13 +14,15 @@
 # }
 #
 # Rules:
-# - Full-span sliders = “no filter” ⇒ omit their keys entirely.
-# - Sliders’ min/max are data-driven (initialized in navbar).
-# - Keep callbacks thin; pack/prune via utils.data_tools.gf_* helpers.
+# - Omit full-span sliders (strict full-span test) → "no filter".
+# - Omit empty arrays/dicts entirely.
+# - Always include "tax_id" among ranks in taxonomy_map so tax_id filters
+#   propagate into Arrow predicate building.
+# - Prune taxonomy cascade: when upstream changes, clear invalid downstream picks.
+# - Never mutate shapes/keys: pages and I/O helpers depend on this contract.
 # -----------------------------------------------------------------------------
 
 from dash import Input, Output, State, callback, no_update
-
 from utils import config
 from utils.data_tools import (
     # Option builders
@@ -76,6 +78,12 @@ def cascade_biogeo_values(levels, cur_values):
 # ──────────────────────────────────────────────────────────────────────────────
 # B) Taxonomy cascade (options + prune invalid values)
 # ──────────────────────────────────────────────────────────────────────────────
+# Inputs:  values from kingdom → phylum → class → order → family → genus → species → tax_id
+# Output:  value lists for *downstream* dropdowns (pruned when upstream changes)
+# Purpose: keep only valid combinations reachable under the current selection path.
+# Note:
+# - The cascade emits cleaned lists (no empty strings/None).
+# - Does *not* write to the global store — it only shapes the dependent dropdown options/values.
 
 @callback(
     # Options (single cascade callback also handles first load)
@@ -117,6 +125,7 @@ def cascade_taxonomy(k, p, c, o, f, g, s, taxid):
         "species": gf_clean_list(s),
         "tax_id": gf_clean_list(taxid),
     }
+
     opts = list_taxonomy_options_cascaded(selections)
 
     def _prune(cur_vals, options):
@@ -134,11 +143,14 @@ def cascade_taxonomy(k, p, c, o, f, g, s, taxid):
     s2 = _prune(selections["species"], opts.get("species"))
     t2 = _prune(selections["tax_id"],  opts.get("tax_id"))
 
-    return (
-        opts.get("kingdom", []), opts.get("phylum", []), opts.get("class", []), opts.get("order", []),
-        opts.get("family", []),  opts.get("genus", []),  opts.get("species", []), opts.get("tax_id", []),
+    taxon_vals = (
+        opts.get("kingdom", []), opts.get("phylum", []), opts.get("class", []),
+        opts.get("order", []), opts.get("family", []),  opts.get("genus", []),
+        opts.get("species", []), opts.get("tax_id", []),
         k2, p2, c2, o2, f2, g2, s2, t2
     )
+
+    return taxon_vals
 
 # ──────────────────────────────────────────────────────────────────────────────
 # C) Biotype % dropdown (values are base names, label=base)
@@ -151,14 +163,27 @@ def cascade_taxonomy(k, p, c, o, f, g, s, taxid):
 )
 def init_biotype_pct_options(_):
     cols = biotype_pct_columns()  # returns list like ["protein_coding_percentage", ...]
-    return [{"label": c.removesuffix(config.GENE_BIOTYPE_PCT_SUFFIX),
-             "value": c.removesuffix(config.GENE_BIOTYPE_PCT_SUFFIX)} for c in cols]
+    biotype_options = [{"label": c.removesuffix(config.GENE_BIOTYPE_PCT_SUFFIX), "value": c.removesuffix(config.GENE_BIOTYPE_PCT_SUFFIX)} for c in cols]
+    return biotype_options
 
 # ──────────────────────────────────────────────────────────────────────────────
-# D) Sync everything → global store (single source of truth)
-#     - Ranges are only included when narrowed (full-span => omitted)
-#     - Biotype% stored as {"biotype": <base>, "min":..., "max":...}
+# D) GLOBAL STORE SYNC
 # ──────────────────────────────────────────────────────────────────────────────
+# Output: dcc.Store(id="global-filters").data
+# Inputs: all filter controls' values (taxonomy, climate labels, climate ranges,
+#         biogeo level/value + ranges, biotype%).
+# Semantics:
+# - Build a dict with ONLY non-empty/narrowed keys (strict full-span omitted).
+# - Persist climate categorical selections under the store key "climate".
+# - Taxonomy: always include "tax_id" in the taxonomy_map ranks list.
+# - Return an *entire* new store payload (replace, don't mutate).
+#
+# Cross-check:
+# - See utils.data_tools: gf_is_full_span, gf_build_* helpers
+# - See tests/test_global_filters_helpers.py for expected packing behavior
+#
+# Pages/callbacks listening to this store *must* tolerate missing keys.
+
 @callback(
     Output("global-filters", "data", allow_duplicate=True),
 
@@ -200,13 +225,28 @@ def init_biotype_pct_options(_):
     prevent_initial_call="initial_duplicate",
 )
 def sync_global_store(
-    tax_kingdom, tax_phylum, tax_class, tax_order, tax_family, tax_genus, tax_species, tax_id,
-    climate_labels,  # For Koppen classification
-    bio_levels, bio_values,
-    bio1_val, bio1_min, bio1_max,
-    bio12_val, bio12_min, bio12_max,
-    range_val, rmin, rmax,
-    biopct_biotype, biopct_range,
+        tax_kingdom,
+        tax_phylum,
+        tax_class,
+        tax_order,
+        tax_family,
+        tax_genus,
+        tax_species,
+        tax_id,
+        climate_labels,  # For Koppen classification
+        bio_levels,
+        bio_values,
+        bio1_val,
+        bio1_min,
+        bio1_max,
+        bio12_val,
+        bio12_min,
+        bio12_max,
+        range_val,
+        rmin,
+        rmax,
+        biopct_biotype,
+        biopct_range,
 ) -> GlobalFilters:
     """Build and return the global filters store.
 
@@ -221,16 +261,33 @@ def sync_global_store(
     - The parameter name `climate_labels` is persisted under store key "climate".
     """
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
+
     if "tax_id" not in ranks:
         ranks.append("tax_id")
+
     values_by_rank = {
-        "kingdom": tax_kingdom, "phylum": tax_phylum, "class": tax_class, "order": tax_order,
-        "family": tax_family, "genus": tax_genus, "species": tax_species, "tax_id": tax_id,
+        "kingdom": tax_kingdom,
+        "phylum": tax_phylum,
+        "class": tax_class,
+        "order": tax_order,
+        "family": tax_family,
+        "genus": tax_genus,
+        "species": tax_species,
+        "tax_id": tax_id,
     }
     taxonomy_map: TaxonomyMap = gf_build_taxonomy_map_from_values(ranks, values_by_rank)
-    climate_ranges: ClimateRanges = gf_build_climate_ranges(bio1_val, bio1_min, bio1_max,
-                                             bio12_val, bio12_min, bio12_max)
+
+    climate_ranges: ClimateRanges = gf_build_climate_ranges(
+        bio1_val,
+        bio1_min,
+        bio1_max,
+        bio12_val,
+        bio12_min,
+        bio12_max
+    )
+
     biogeo_ranges: BiogeoRanges  = gf_build_biogeo_ranges(range_val, rmin, rmax)
+
     biotype_pct: BiotypePctFilter | None = gf_build_biotype_pct(biopct_biotype, biopct_range)
 
     store = gf_build_store(
@@ -242,6 +299,7 @@ def sync_global_store(
         biogeo_ranges=biogeo_ranges,
         biotype_pct=biotype_pct,
     )
+
     return store
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -308,6 +366,10 @@ def reset_biotype_pct(n):
         return no_update, no_update
     return None, [0, 100]
 
+# RESET ALL
+# Clears taxonomy/climate labels/biogeo/biotype% selections and restores slider values
+# to their *current extents* (from navbar bootstrap). Returns a full tuple of component values.
+# Important: the callback must return a value for *every* controlled prop in the navbar.
 @callback(
     # taxonomy
     Output("filter-tax-kingdom", "value", allow_duplicate=True),
