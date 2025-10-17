@@ -20,6 +20,11 @@
 #   propagate into Arrow predicate building.
 # - Prune taxonomy cascade: when upstream changes, clear invalid downstream picks.
 # - Never mutate shapes/keys: pages and I/O helpers depend on this contract.
+# - This file is the ONLY writer to dcc.Store(id="global-filters"); pages read it.
+# Dash wiring tips:
+# - Some callbacks use allow_duplicate=True; keep prevent_initial_call='initial_duplicate'
+#   to both permit duplicates and run on first load.
+# - Pages MUST tolerate missing keys in the store.
 # -----------------------------------------------------------------------------
 
 from dash import Input, Output, State, callback, no_update
@@ -222,6 +227,7 @@ def init_biotype_pct_options(_):
     Input("bio-pct-biotype", "value"),
     Input("bio-pct-range", "value"),
 
+# We allow duplicate writers elsewhere; also run on initial load.
     prevent_initial_call="initial_duplicate",
 )
 def sync_global_store(
@@ -260,11 +266,14 @@ def sync_global_store(
     - Full-span sliders mean “no filter” and are omitted from the store.
     - The parameter name `climate_labels` is persisted under store key "climate".
     """
+
+    # Ranks list (ensure 'tax_id' included so id filters propagate)
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
 
     if "tax_id" not in ranks:
         ranks.append("tax_id")
 
+    # Taxonomy map (drop empty lists)
     values_by_rank = {
         "kingdom": tax_kingdom,
         "phylum": tax_phylum,
@@ -275,21 +284,25 @@ def sync_global_store(
         "species": tax_species,
         "tax_id": tax_id,
     }
+
     taxonomy_map: TaxonomyMap = gf_build_taxonomy_map_from_values(ranks, values_by_rank)
 
+    # Numeric ranges (omit full-span)
     climate_ranges: ClimateRanges = gf_build_climate_ranges(
-        bio1_val,
-        bio1_min,
-        bio1_max,
-        bio12_val,
-        bio12_min,
-        bio12_max
+        bio1_val, bio1_min, bio1_max,
+        bio12_val, bio12_min, bio12_max
     )
 
-    biogeo_ranges: BiogeoRanges  = gf_build_biogeo_ranges(range_val, rmin, rmax)
+    biogeo_ranges: BiogeoRanges  = gf_build_biogeo_ranges(
+        range_val, rmin, rmax
+    )
 
-    biotype_pct: BiotypePctFilter | None = gf_build_biotype_pct(biopct_biotype, biopct_range)
+    # Biotype% (only when narrowed and biotype chosen)
+    biotype_pct: BiotypePctFilter | None = gf_build_biotype_pct(
+        biopct_biotype, biopct_range
+    )
 
+    # Pack only non-empty keys per contract
     store = gf_build_store(
         taxonomy_map=taxonomy_map,
         climate_labels=gf_clean_list(climate_labels),  # For Koppen classification
