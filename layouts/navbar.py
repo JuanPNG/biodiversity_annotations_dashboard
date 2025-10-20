@@ -265,6 +265,7 @@ def get_navbar() -> html.Header:
                             dcc.Dropdown(id="filter-climate", options=[], multi=True, placeholder="Select climate…")
                         ],
                         className="filter-col",
+                        style={"display": "none"},  # TODO: Delete for displaying Koppen categorical climate.
                     ),
                     _slider_from_col(
                         None,
