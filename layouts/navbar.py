@@ -390,7 +390,7 @@ def get_navbar() -> html.Header:
                 className="filters-grid"),
             reset_all_toolbar,
         ],
-        open=True,
+        open=False,
         className="filter-group",
     )
 
