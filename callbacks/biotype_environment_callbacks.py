@@ -15,6 +15,7 @@ from utils.data_tools import (
     get_accessions_for_biogeo,
     ui_label_for_column,
 )
+from utils.plotly_theme import apply_embl_theme
 
 PCT_SUFFIX   = config.GENE_BIOTYPE_PCT_SUFFIX
 COUNT_SUFFIX = config.GENE_BIOTYPE_COUNT_SUFFIX
@@ -99,7 +100,8 @@ def _make_fig(
 ) -> go.Figure:
     fig = go.Figure()
     if not xcol or df.empty:
-        fig.update_layout(template="plotly_dark", title=title, height=520, width=800, margin=dict(l=10, r=10, t=40, b=10))
+        fig.update_layout(title=title, height=520, width=800, margin=dict(l=10, r=10, t=40, b=10))
+        apply_embl_theme(fig)
         return fig
 
     for c in biotype_cols:
@@ -158,7 +160,6 @@ def _make_fig(
                 ))
 
     fig.update_layout(
-        template="plotly_dark",
         margin=dict(l=10, r=10, t=60, b=70),
         legend=dict(
             orientation="h",
@@ -174,6 +175,7 @@ def _make_fig(
     )
     fig.update_xaxes(title_text=ui_label_for_column(xcol), type=("log" if logx else "linear"), rangemode="tozero")
     fig.update_yaxes(title_text=y_axis_title, type=("log" if logy else "linear"), rangemode="tozero")
+    apply_embl_theme(fig)
     return fig
 
 
@@ -208,10 +210,12 @@ def init_biotypes(_):
 )
 def render_scatter(biotype_cols, y_metric, reg_flags, size_flags, point_cap,
                    x_clim, logx_clim_val, x_dist, logx_dist_val, logy_val, gf):
-
+    gf = gf or {}  # Treat as dict, default to empty if None
     biotype_cols = list(biotype_cols or [])
     if not biotype_cols:
-        empty = go.Figure(); empty.update_layout(template="plotly_dark", height=520, width=800)
+        empty = go.Figure()
+        empty.update_layout(height=520, width=800)
+        apply_embl_theme(empty)
         return empty, empty, "Select at least one biotype."
 
     # Which Y values to read & label
