@@ -121,6 +121,7 @@ def layout():
                 className="db-controls",  # reuse your existing row styling inside the collapsible
             ),
         ],
+        id="bs-plot-controls",
         open=False,                # collapsed by default
         className="filter-group",  # same styling as your other collapsibles
     )
