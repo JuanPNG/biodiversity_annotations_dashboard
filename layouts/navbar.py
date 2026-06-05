@@ -102,7 +102,7 @@ def get_navbar() -> html.Header:
         [
             html.Summary(
                 [
-                    "🧬 Taxonomy",
+                    "Taxonomy",
                     html.Span("0", id="tax-summary-badge", className="badge")
                 ],
                 className="filter-summary",
@@ -186,7 +186,7 @@ def get_navbar() -> html.Header:
         [
             html.Summary(
                 [
-                    "🌍 Biogeography",
+                    "Biogeography",
                     html.Span("0", id="biogeo-summary-badge", className="badge")
                 ],
                 className="filter-summary",
@@ -251,7 +251,7 @@ def get_navbar() -> html.Header:
         [
             html.Summary(
                 [
-                    "🌡️ Climate",
+                    "Climate",
                     html.Span("0", id="climate-summary-badge", className="badge")
                 ],
                 className="filter-summary",
@@ -301,7 +301,7 @@ def get_navbar() -> html.Header:
         [
             html.Summary(
                 [
-                    "🧪 Gene biotypes",
+                    "Gene biotypes",
                     html.Span("0", id="bio-summary-badge", className="badge")
                 ],
                 className="filter-summary",
@@ -372,7 +372,7 @@ def get_navbar() -> html.Header:
         [
             html.Summary(
                 [
-                    "🔎 Data filters",
+                    "Data filters",
                     html.Span(
                         "0",
                         id="all-summary-badge",
@@ -397,12 +397,11 @@ def get_navbar() -> html.Header:
 
     # --- Logos ---
     logos = html.Div(
-                [
-                    html.Img(src="/assets/AriseLogo.png", alt="ARISE logo", className="navbar-logo"),
-                    html.Img(src="/assets/embl-ebi-logo.png", alt="EMBL logo", className="navbar-partners"),
-                ],
-                className="navbar-logos",
-            )
+        [
+            html.Img(src="/assets/embl-ebi-rgb-full-colour.png", alt="EMBL-EBI logo", className="navbar-partners"),
+        ],
+        className="navbar-logos",
+    )
 
     # --- NAVBAR ---
     navbar = html.Header(
