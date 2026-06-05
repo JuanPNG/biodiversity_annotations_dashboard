@@ -1,0 +1,778 @@
+/* ================================
+   EMBL-EBI Light Theme
+   Loaded after styles.css
+=================================== */
+
+.app-root[data-theme="embl-light"] {
+  --bg: #ffffff;
+  --surface-1: #ffffff;
+  --surface-2: #f7f8f6;
+  --surface-3: #eef1ec;
+
+  --text: #373A36;
+  --text-dim: #707372;
+
+  --accent: #18974C;
+  --accent-2: #007B53;
+
+  --ok: #18974C;
+  --warn: #F4C61F;
+  --danger: #D41645;
+
+  --link: #2A57A3;
+  --link-hover: #193F90;
+  --link-visited: #563D82;
+
+  --border: #D0D0CE;
+  --border-2: #A8A99E;
+
+  --shadow: none;
+}
+
+.app-root[data-theme="embl-light"],
+.app-root[data-theme="embl-light"] body {
+  font-family: "IBM Plex Sans", Helvetica, Arial, sans-serif;
+}
+
+.app-root[data-theme="embl-light"] {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app-root[data-theme="embl-light"] a {
+  color: var(--link);
+}
+
+.app-root[data-theme="embl-light"] a:hover {
+  color: var(--link-hover);
+}
+
+.app-root[data-theme="embl-light"] a:visited {
+  color: var(--link-visited);
+}
+
+/* EMBL-EBI full-colour logo must sit on plain white in the light theme. */
+.app-root[data-theme="embl-light"] .navbar-logos .navbar-logo,
+.app-root[data-theme="embl-light"] .navbar-logos .navbar-partners {
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  border-radius: 0;
+}
+
+/* ================================
+   EMBL-EBI Header
+=================================== */
+
+.app-root[data-theme="embl-light"] .navbar {
+  background: #ffffff;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  padding: 16px 0 14px;
+  backdrop-filter: none;
+}
+
+.app-root[data-theme="embl-light"] .brand {
+  color: var(--text);
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1.25;
+  margin-bottom: 12px;
+}
+
+.app-root[data-theme="embl-light"] .nav-links {
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.app-root[data-theme="embl-light"] .nav-link {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+  font-weight: 500;
+  opacity: 1;
+  padding: 8px 10px;
+  text-decoration: none;
+  border-bottom: 3px solid transparent;
+}
+
+.app-root[data-theme="embl-light"] .nav-link:hover {
+  background: var(--surface-2);
+  color: var(--accent-2);
+  text-decoration: none;
+}
+
+.app-root[data-theme="embl-light"] .nav-link.active {
+  background: transparent;
+  border-color: var(--accent);
+  box-shadow: none;
+  color: var(--accent-2);
+}
+
+/* ================================
+   EMBL-EBI Filters
+=================================== */
+
+.app-root[data-theme="embl-light"] .filter-group {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: none;
+  margin-bottom: 12px;
+}
+
+.app-root[data-theme="embl-light"] .filter-summary,
+.app-root[data-theme="embl-light"] details > summary {
+  color: var(--text);
+  border-bottom-color: var(--border);
+  border-radius: 0;
+  font-weight: 600;
+}
+
+.app-root[data-theme="embl-light"] details > summary:hover,
+.app-root[data-theme="embl-light"] details > summary:focus-visible {
+  background: var(--surface-2);
+  outline: 2px solid transparent;
+  color: var(--accent-2);
+}
+
+.app-root[data-theme="embl-light"] details > summary::before {
+  color: var(--accent);
+}
+
+.app-root[data-theme="embl-light"] details[open] > summary {
+  color: var(--accent-2);
+}
+
+.app-root[data-theme="embl-light"] .filters-grid {
+  gap: 14px;
+  padding: 14px;
+}
+
+.app-root[data-theme="embl-light"] .control-label {
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.app-root[data-theme="embl-light"] .badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.5rem;
+  padding: 0 0.45rem;
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  text-align: center;
+}
+
+.app-root[data-theme="embl-light"] .btn-reset {
+  background: #ffffff;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--accent-2);
+  font-weight: 600;
+  line-height: 1.2;
+  min-height: 36px;
+}
+
+.app-root[data-theme="embl-light"] .btn-reset:hover,
+.app-root[data-theme="embl-light"] .btn-reset:focus-visible {
+  background: var(--surface-2);
+  border-color: var(--accent-2);
+  color: var(--accent-2);
+}
+
+.app-root[data-theme="embl-light"] .filters-toolbar {
+  border-top: 1px solid var(--border);
+  padding: 12px 14px 14px;
+}
+
+/* ================================
+   EMBL-EBI Page Surfaces
+=================================== */
+
+.app-root[data-theme="embl-light"] .page-container {
+  background: #ffffff;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  padding: 20px 0 24px;
+  margin-bottom: 24px;
+}
+
+.app-root[data-theme="embl-light"] .page-container > h1 {
+  color: var(--text);
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0 0 18px;
+}
+
+.app-root[data-theme="embl-light"] .home-section {
+  border-bottom: 1px solid var(--border);
+  margin: 18px 0 28px;
+  padding-bottom: 18px;
+}
+
+.app-root[data-theme="embl-light"] .home-section-title {
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.app-root[data-theme="embl-light"] .prose,
+.app-root[data-theme="embl-light"] .intro-text {
+  color: var(--text-dim);
+  line-height: 1.65;
+}
+
+.app-root[data-theme="embl-light"] .prose strong,
+.app-root[data-theme="embl-light"] .prose b {
+  color: var(--text);
+}
+
+.app-root[data-theme="embl-light"] .prose ul > li::marker,
+.app-root[data-theme="embl-light"] .prose ol > li::marker {
+  color: var(--accent);
+}
+
+.app-root[data-theme="embl-light"] .kpi-card,
+.app-root[data-theme="embl-light"] .nav-card,
+.app-root[data-theme="embl-light"] .panel {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-root[data-theme="embl-light"] .kpi-card {
+  align-items: flex-start;
+  justify-content: flex-start;
+  text-align: left;
+  min-height: 64px;
+  padding: 10px 12px;
+}
+
+.app-root[data-theme="embl-light"] .kpi-label {
+  color: var(--text-dim);
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+
+.app-root[data-theme="embl-light"] .kpi-card h3 {
+  color: var(--accent-2);
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.app-root[data-theme="embl-light"] .kpi-subtext {
+  color: var(--text-dim);
+  line-height: 1.25;
+  margin: 3px 0 0;
+  text-align: left;
+}
+
+.app-root[data-theme="embl-light"] .kpi-grid {
+  grid-template-columns: repeat(auto-fill, minmax(130px, 160px));
+  justify-content: start;
+  gap: 12px;
+}
+
+@media (min-width: 720px) {
+  .app-root[data-theme="embl-light"] .kpi-card--wide {
+    grid-column: span 2;
+  }
+}
+
+.app-root[data-theme="embl-light"] .nav-card {
+  border-top: 4px solid var(--accent);
+  border-radius: 4px;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.app-root[data-theme="embl-light"] .nav-card:hover {
+  background: var(--surface-2);
+  box-shadow: none;
+  transform: none;
+  border-top-color: var(--accent-2);
+}
+
+.app-root[data-theme="embl-light"] .nav-card .card-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.app-root[data-theme="embl-light"] .nav-card .card-sub {
+  color: var(--text-dim);
+  opacity: 1;
+}
+
+.app-root[data-theme="embl-light"] .panel-title {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ================================
+   EMBL-EBI Dropdowns
+=================================== */
+
+.app-root[data-theme="embl-light"] .Select-control {
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  min-height: 38px;
+}
+
+.app-root[data-theme="embl-light"] .Select-control:hover {
+  border-color: var(--accent) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select.is-focused .Select-control,
+.app-root[data-theme="embl-light"] .Select.is-open .Select-control {
+  border-color: var(--accent) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select-placeholder,
+.app-root[data-theme="embl-light"] .Select--single > .Select-control .Select-value {
+  color: var(--text-dim) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select-value-label {
+  color: var(--text) !important;
+}
+
+/* React Select uses an internal text input; do not style it like a standalone form field. */
+.app-root[data-theme="embl-light"] .Select-input,
+.app-root[data-theme="embl-light"] .Select-input > input {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+  font-family: "IBM Plex Sans", Helvetica, Arial, sans-serif;
+  height: auto !important;
+  min-height: 0 !important;
+  outline: none !important;
+  padding: 0 !important;
+}
+
+.app-root[data-theme="embl-light"] .Select-arrow {
+  border-color: var(--text-dim) transparent transparent !important;
+}
+
+.app-root[data-theme="embl-light"] .Select-menu-outer {
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  box-shadow: none !important;
+  color: var(--text) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select-option {
+  background: #ffffff !important;
+  color: var(--text) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select-option.is-focused {
+  background: var(--surface-2) !important;
+  color: var(--accent-2) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select-option.is-selected {
+  background: var(--surface-3) !important;
+  color: var(--accent-2) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select--multi .Select-value {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 4px !important;
+  color: var(--text) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select--multi .Select-value-label {
+  color: var(--text) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select--multi .Select-value-icon {
+  color: var(--text-dim) !important;
+  border-right-color: var(--border) !important;
+}
+
+.app-root[data-theme="embl-light"] .Select--multi .Select-value-icon:hover {
+  background: var(--danger) !important;
+  color: #ffffff !important;
+}
+
+/* ================================
+   EMBL-EBI Sliders
+=================================== */
+
+.app-root[data-theme="embl-light"] .rc-slider-rail {
+  background-color: var(--border);
+  height: 4px;
+}
+
+.app-root[data-theme="embl-light"] .rc-slider-track {
+  background-color: var(--accent);
+  height: 4px;
+}
+
+.app-root[data-theme="embl-light"] .rc-slider-handle {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  background-color: #ffffff;
+  border: 2px solid var(--accent);
+  box-shadow: none;
+}
+
+.app-root[data-theme="embl-light"] .rc-slider-handle:hover,
+.app-root[data-theme="embl-light"] .rc-slider-handle:focus {
+  border-color: var(--accent-2);
+  box-shadow: none !important;
+}
+
+.app-root[data-theme="embl-light"] .rc-slider-dot {
+  border-color: var(--border) !important;
+  background-color: #ffffff;
+}
+
+.app-root[data-theme="embl-light"] .rc-slider-dot-active {
+  border-color: var(--accent) !important;
+}
+
+.app-root[data-theme="embl-light"] .rc-slider-mark-text {
+  color: var(--text-dim) !important;
+  font-size: 0.68rem;
+}
+
+.app-root[data-theme="embl-light"] .rc-slider-tooltip-inner {
+  background-color: var(--text);
+  color: #ffffff;
+  border-radius: 4px;
+  box-shadow: none;
+}
+
+.app-root[data-theme="embl-light"] .rc-slider-tooltip-arrow {
+  border-top-color: var(--text);
+}
+
+/* ================================
+   EMBL-EBI AG Grid
+=================================== */
+
+.app-root[data-theme="embl-light"] .ag-theme-alpine {
+  --ag-background-color: #ffffff;
+  --ag-foreground-color: var(--text);
+  --ag-secondary-foreground-color: var(--text-dim);
+  --ag-border-color: var(--border);
+  --ag-header-background-color: var(--surface-2);
+  --ag-header-foreground-color: var(--text);
+  --ag-odd-row-background-color: #ffffff;
+  --ag-row-hover-color: var(--surface-2);
+  --ag-selected-row-background-color: rgba(24, 151, 76, 0.12);
+  --ag-input-focus-border-color: var(--accent);
+  --ag-range-selection-border-color: var(--accent);
+  --ag-font-family: "IBM Plex Sans", Helvetica, Arial, sans-serif;
+  --ag-font-size: 14px;
+  --ag-header-height: 48px;
+  --ag-floating-filters-height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.app-root[data-theme="embl-light"] .ag-theme-alpine .ag-root-wrapper {
+  border: 0;
+  border-radius: 4px;
+}
+
+.app-root[data-theme="embl-light"] .ag-theme-alpine .ag-header {
+  border-bottom: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.app-root[data-theme="embl-light"] .ag-theme-alpine .ag-header-cell-label {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: normal;
+}
+
+.app-root[data-theme="embl-light"] .ag-theme-alpine .ag-floating-filter-input,
+.app-root[data-theme="embl-light"] .ag-theme-alpine .ag-floating-filter input,
+.app-root[data-theme="embl-light"] .ag-theme-alpine .ag-input-field-input {
+  border-color: var(--border);
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.app-root[data-theme="embl-light"] .ag-theme-alpine .ag-floating-filter-input:focus,
+.app-root[data-theme="embl-light"] .ag-theme-alpine .ag-floating-filter input:focus,
+.app-root[data-theme="embl-light"] .ag-theme-alpine .ag-input-field-input:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+  outline: none;
+}
+
+.app-root[data-theme="embl-light"] #db-grid .ag-body-viewport::-webkit-scrollbar,
+.app-root[data-theme="embl-light"] #db-grid .ag-center-cols-viewport::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.app-root[data-theme="embl-light"] #db-grid .ag-body-viewport::-webkit-scrollbar-thumb,
+.app-root[data-theme="embl-light"] #db-grid .ag-center-cols-viewport::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 8px;
+}
+
+/* ================================
+   EMBL-EBI Form Controls
+=================================== */
+
+.app-root[data-theme="embl-light"] input,
+.app-root[data-theme="embl-light"] textarea {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: "IBM Plex Sans", Helvetica, Arial, sans-serif;
+  min-height: 34px;
+  padding: 4px 8px;
+}
+
+.app-root[data-theme="embl-light"] input:hover,
+.app-root[data-theme="embl-light"] textarea:hover {
+  border-color: var(--accent);
+}
+
+.app-root[data-theme="embl-light"] input:focus,
+.app-root[data-theme="embl-light"] textarea:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+  outline: none;
+}
+
+.app-root[data-theme="embl-light"] label {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.app-root[data-theme="embl-light"] small {
+  color: var(--text-dim);
+}
+
+.app-root[data-theme="embl-light"] #db-status,
+.app-root[data-theme="embl-light"] #ga-status,
+.app-root[data-theme="embl-light"] #ga-crumbs {
+  color: var(--text-dim);
+  opacity: 1 !important;
+}
+
+/* ================================
+   EMBL-EBI Plotly Containers
+=================================== */
+
+.app-root[data-theme="embl-light"] .dash-graph,
+.app-root[data-theme="embl-light"] .js-plotly-plot {
+  background: #ffffff !important;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.app-root[data-theme="embl-light"] .plot-container,
+.app-root[data-theme="embl-light"] .svg-container {
+  background: #ffffff !important;
+}
+
+.app-root[data-theme="embl-light"] .modebar {
+  background: transparent !important;
+}
+
+.app-root[data-theme="embl-light"] .modebar-btn {
+  color: var(--text-dim) !important;
+}
+
+.app-root[data-theme="embl-light"] .modebar-btn:hover {
+  background: var(--surface-2) !important;
+  color: var(--accent-2) !important;
+}
+
+/* ================================
+   EMBL-EBI Footer
+=================================== */
+
+.app-root[data-theme="embl-light"] .site-footer {
+  background: #ffffff;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  margin-top: auto;
+  padding: 20px 0 16px;
+}
+
+.app-root[data-theme="embl-light"] .footer-left {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+
+.app-root[data-theme="embl-light"] .footer-left .home-section-title {
+  color: var(--text);
+  font-size: 1.15rem;
+  margin: 0 0 6px;
+}
+
+.app-root[data-theme="embl-light"] .footer-left a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.app-root[data-theme="embl-light"] .footer-left a:hover {
+  color: var(--link-hover);
+}
+
+.app-root[data-theme="embl-light"] .footer-banner {
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 16px;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.app-root[data-theme="embl-light"] .footer-arise-logo {
+  display: block;
+  flex: 0 0 auto;
+  height: clamp(30px, 4.5vw, 46px);
+  max-width: 155px;
+  object-fit: contain;
+  width: auto;
+}
+
+.app-root[data-theme="embl-light"] .footer-banner-img {
+  display: block;
+  flex: 0 1 auto;
+  height: auto;
+  margin: 0;
+  max-width: 500px;
+  object-fit: contain;
+  width: min(68vw, 500px);
+}
+
+/* ================================
+   Biotype vs Environment plot controls
+=================================== */
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .db-controls {
+  display: grid;
+  grid-template-columns: 1.6fr 1.1fr 1.1fr 0.8fr 1fr;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 8px 14px 10px;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .db-control {
+  align-self: start;
+  min-width: 0;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .db-control:first-child {
+  grid-column: 1 / -1;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .control-label {
+  display: block;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls #bs-y-metric,
+.app-root[data-theme="embl-light"] #bs-plot-controls #bs-reg,
+.app-root[data-theme="embl-light"] #bs-plot-controls #bs-size,
+.app-root[data-theme="embl-light"] #bs-plot-controls #bs-logy {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .radio-input,
+.app-root[data-theme="embl-light"] #bs-plot-controls .checkbox-input {
+  accent-color: var(--accent);
+  background: initial;
+  border: initial;
+  border-radius: 0;
+  box-shadow: none;
+  flex: 0 0 auto;
+  height: 16px;
+  margin: 0 8px 0 0;
+  min-height: 0;
+  padding: 0;
+  width: 16px;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls label.radio-label,
+.app-root[data-theme="embl-light"] #bs-plot-controls label.checkbox-label {
+  font-size: 0.85rem !important;
+  font-weight: 400 !important;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls #bs-cap {
+  box-sizing: border-box;
+  height: 32px;
+  min-height: 32px;
+  max-width: 120px;
+  padding: 3px 8px;
+  width: 120px !important;
+}
+
+@media (max-width: 900px) {
+  .app-root[data-theme="embl-light"] #bs-plot-controls .db-controls {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .app-root[data-theme="embl-light"] #bs-plot-controls .db-controls {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Keep the modified footer usable when reverting to the original dark theme. */
+.app-root[data-theme="dark"] .footer-banner {
+  align-items: center;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 16px;
+  justify-content: center;
+}
+
+.app-root[data-theme="dark"] .footer-arise-logo {
+  display: block;
+  flex: 0 0 auto;
+  height: clamp(28px, 4vw, 42px);
+  max-width: 145px;
+  object-fit: contain;
+  width: auto;
+}
+
+.app-root[data-theme="dark"] .footer-banner-img {
+  flex: 0 1 auto;
+  margin: 0;
+  max-width: 460px;
+  object-fit: contain;
+  width: min(68vw, 460px);
+}
