@@ -23,11 +23,18 @@ def get_footer() -> html.Footer:
 
             # Section B — Closing banner (full-width, below)
             html.Div(
-                html.Img(
-                    src="/assets/ARISE-EU_info.png",
-                    alt="Project partners",
-                    className="footer-banner-img",
-                ),
+                [
+                    html.Img(
+                        src="/assets/AriseLogo.png",
+                        alt="ARISE logo",
+                        className="footer-arise-logo",
+                    ),
+                    html.Img(
+                        src="/assets/ARISE-EU_info.png",
+                        alt="Project partners",
+                        className="footer-banner-img",
+                    ),
+                ],
                 className="footer-banner",
             ),
         ],
