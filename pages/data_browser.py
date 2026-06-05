@@ -100,6 +100,8 @@ layout = html.Main(
                 "wrapHeaderText": True,
                 "autoHeaderHeight": True,
                 "enableBrowserTooltips": True,
+                "enableCellTextSelection": True,
+                "ensureDomOrder": True,
             },
             style={
                 "height": "70vh",
@@ -107,7 +109,7 @@ layout = html.Main(
                 "overflowX": "auto",
                 "overflowY": "auto",
             },
-            className="ag-theme-alpine-dark"
+            className="ag-theme-alpine"
         ),
     ],
     className="page-container",
