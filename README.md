@@ -59,6 +59,24 @@ python app.py
         ├── biogeo_long.parquet
         └── gbif_occurrences.parquet
 ```
+## Mental model
+
+```mermaid
+flowchart TD
+    A["Raw integrated Parquet"] --> B["etl_parquet scripts"]
+    B --> C["data/processed/*.parquet"]
+
+    C --> D["utils/parquet_io.py<br/>data access + aggregation"]
+    E["utils/config.py<br/>paths, columns, labels"] --> D
+    F["utils/data_tools.py<br/>pure helper logic"] --> G
+
+    H["layouts/navbar.py<br/>filter controls"] --> G["callbacks/global_filters.py<br/>global-filters store"]
+    G --> I["Page callbacks"]
+
+    D --> I
+    I --> J["Dash pages<br/>Home, Data Browser,<br/>Genome Annotations,<br/>Biotype vs Environment"]
+```
+
 
 ## Data model (columns)
 
