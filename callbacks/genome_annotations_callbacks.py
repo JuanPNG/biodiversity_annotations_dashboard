@@ -8,6 +8,7 @@ from utils.data_tools import (
     ga_prev_rank,
     ga_apply_drill_to_taxonomy_map,
 )
+from utils.plotly_theme import apply_embl_theme
 
 # ---------- Drill handler (click bar to go deeper; buttons to navigate) ----------
 @callback(
@@ -160,6 +161,8 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
     )
     fig.update_xaxes(range=[0, 100], title="Percentage", ticksuffix="%")
     fig.update_yaxes(title=group_rank.title())
+
+    apply_embl_theme(fig)
 
     crumbs = " / ".join(f"{p['rank'].title()}: {p['value']}" for p in drill) or "—"
     status = f"{len(groups)} {group_rank} • {len(biotypes_all)} biotypes"
