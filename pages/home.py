@@ -14,10 +14,8 @@ intro = html.Section(
                 html.Div(
                     [
                         html.P(
-                            "Welcome! This experimental dashboard lets you explore sequenced genomes with completed "
-                            "annotations across taxonomy, climate, and geography."
-                        ),
-                        html.P(
+                            "This experimental dashboard lets you explore sequenced genomes with completed "
+                            "annotations across taxonomy, climate, and geography. "
                             "You can browse gene biotype counts and see how they vary across species, taxonomic groups, "
                             "and environments. Use the filters above to refine the dataset and discover species of interest."
                         ),
@@ -44,6 +42,10 @@ intro = html.Section(
 kpis = html.Section(
             [
                 html.H2("Key figures", className="home-section-title"),
+                html.P(
+                    "These key figures summarise the filtered dataset by showing how many taxa, biogeographic categories, and gene annotations are currently included after the data filters have been applied.",
+                    className="home-section-body prose",
+                ),
                 dcc.Loading(
                     type="dot",
                     children=html.Div(
@@ -112,16 +114,9 @@ nav_cards = html.Div(
 pages_desc = html.Section(
             [
                 html.H2("Explore the data", className="home-section-title"),
-                html.Div(
-                    html.Ul(
-                        [
-                            html.Li("Home — An overview of the filtered data."),
-                            html.Li("Data Browser — Explore the data in detail."),
-                            html.Li("Genome Annotations — Compare species within and between taxa."),
-                            html.Li("Biotype vs Environment — Examine the gene biotypes in relation to the species' environment and distribution."),
-                        ],
-                        className="home-section-body prose",
-                    )
+                html.P(
+                    "Use the pages below to explore the filtered data through tables, genome annotation summaries, and environmental comparisons.",
+                    className="home-section-body prose",
                 ),
                 nav_cards,
             ],
