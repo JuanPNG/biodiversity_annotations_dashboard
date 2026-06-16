@@ -634,10 +634,20 @@
   padding: 0 0 16px;
 }
 
+.app-root[data-theme="embl-light"] .footer-content {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
 .app-root[data-theme="embl-light"] .footer-left {
   color: var(--text-dim);
+  flex: 0 1 auto;
   font-size: 0.95rem;
   line-height: 1.5;
+  margin: 0;
 }
 
 .app-root[data-theme="embl-light"] .footer-left .home-section-title {
@@ -658,11 +668,15 @@
 
 .app-root[data-theme="embl-light"] .footer-banner {
   align-items: center;
+  border-top: 0;
   display: flex;
+  flex: 0 1 auto;
   flex-wrap: nowrap;
-  gap: 16px;
-  justify-content: flex-start;
+  gap: 12px;
+  justify-content: flex-end;
+  margin: 0;
   min-width: 0;
+  padding: 0;
 }
 
 .app-root[data-theme="embl-light"] .footer-arise-logo {
@@ -682,6 +696,18 @@
   max-width: 500px;
   object-fit: contain;
   width: min(68vw, 500px);
+}
+
+@media (max-width: 900px) {
+  .app-root[data-theme="embl-light"] .footer-content {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .app-root[data-theme="embl-light"] .footer-banner {
+    justify-content: flex-start;
+  }
 }
 
 /* ================================
