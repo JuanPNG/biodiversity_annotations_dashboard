@@ -130,8 +130,8 @@ def layout():
         [
             html.H2("Biotype vs Environment", className="home-section-title"),
             html.P(
-                "Explore relationships between gene biotype abundance and climate/distribution. "
-                "All global filters (taxonomy, biogeography, climate, numeric ranges, biotype%) apply.",
+                "Compare selected gene biotypes with climate and distribution variables. "
+                "Use Plot controls to choose biotypes, change the Y-axis metric, add trendlines, and adjust point display.",
                 className="prose"
             ),
 
