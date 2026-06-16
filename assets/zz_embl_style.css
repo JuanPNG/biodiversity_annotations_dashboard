@@ -269,7 +269,7 @@
   align-items: flex-start;
   justify-content: flex-start;
   text-align: left;
-  min-height: 64px;
+  min-height: 50px;
   padding: 10px 12px;
 }
 
