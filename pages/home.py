@@ -10,7 +10,7 @@ from dash import dcc, html
 # Introduction
 intro = html.Section(
             [
-                html.H1("Welcome 👋", className="home-section-title"),
+                html.H1("Welcome", className="home-section-title"),
                 html.Div(
                     [
                         html.P(
@@ -80,7 +80,7 @@ nav_cards = html.Div(
         dcc.Link(
             html.Div(
                 [html.Div("Data Browser", className="card-title"),
-                 html.Div("Table with customisable fields.", className="card-sub")],
+                 html.Div("Take a closer look at the data by using a table with customisable fields.", className="card-sub")],
                 className="nav-card"
             ),
             href="/data-browser",
@@ -89,7 +89,7 @@ nav_cards = html.Div(
         dcc.Link(
             html.Div(
                 [html.Div("Genome Annotations", className="card-title"),
-                 html.Div("Stacked % bar charts by biotype with drilldown.", className="card-sub")],
+                 html.Div("Use stacked percentage bar charts to compare species gene biotypes within and between taxa.", className="card-sub")],
                 className="nav-card"
             ),
             href="/genome-annotations",
@@ -98,19 +98,10 @@ nav_cards = html.Div(
         dcc.Link(
             html.Div(
                 [html.Div("Biotype vs Environment", className="card-title"),
-                 html.Div("Scatterplots of biotypes against climate and distribution.", className="card-sub")],
+                 html.Div("Use scatter plots to examine the gene biotypes in relation to the species' environment and distribution.", className="card-sub")],
                 className="nav-card"
             ),
             href="/biotype-environment",
-            className="nav-card-link",
-        ),
-        dcc.Link(
-            html.Div(
-                [html.Div("Maps (soon)", className="card-title"),
-                 html.Div("GBIF occurrences & Biogeography", className="card-sub")],
-                className="nav-card nav-card--disabled"
-            ),
-            href="#",
             className="nav-card-link",
         ),
     ],
