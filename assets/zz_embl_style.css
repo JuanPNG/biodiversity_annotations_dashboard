@@ -205,8 +205,8 @@
   border: 0;
   border-radius: 0;
   box-shadow: none;
-  padding: 20px 0 24px;
-  margin-bottom: 24px;
+  padding: 8px 0 0;
+  margin-bottom: 0;
 }
 
 .app-root[data-theme="embl-light"] .page-container > h1 {
@@ -219,8 +219,17 @@
 
 .app-root[data-theme="embl-light"] .home-section {
   border-bottom: 1px solid var(--border);
-  margin: 18px 0 28px;
-  padding-bottom: 18px;
+  margin: 12px 0 18px;
+  padding-bottom: 12px;
+}
+
+.app-root[data-theme="embl-light"] .page-container > .home-section:last-child {
+  margin-bottom: 0;
+  padding-bottom: 12px;
+}
+
+.app-root[data-theme="embl-light"] .page-container > .home-section:first-child {
+  margin-top: 0;
 }
 
 .app-root[data-theme="embl-light"] .home-section-title {
@@ -228,6 +237,7 @@
   font-size: 1.35rem;
   font-weight: 600;
   line-height: 1.25;
+  margin: 0 0 10px;
 }
 
 .app-root[data-theme="embl-light"] .prose,
@@ -285,7 +295,8 @@
 .app-root[data-theme="embl-light"] .kpi-grid {
   grid-template-columns: repeat(auto-fill, minmax(130px, 160px));
   justify-content: start;
-  gap: 12px;
+  gap: 10px;
+  margin: 12px 0;
 }
 
 @media (min-width: 720px) {
@@ -617,11 +628,10 @@
 .app-root[data-theme="embl-light"] .site-footer {
   background: #ffffff;
   border: 0;
-  border-top: 1px solid var(--border);
   border-radius: 0;
   box-shadow: none;
-  margin-top: auto;
-  padding: 20px 0 16px;
+  margin-top: 12px !important;
+  padding: 0 0 16px;
 }
 
 .app-root[data-theme="embl-light"] .footer-left {
