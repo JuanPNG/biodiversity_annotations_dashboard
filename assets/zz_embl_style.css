@@ -67,22 +67,22 @@
 .app-root[data-theme="embl-light"] .navbar {
   background: #ffffff;
   border-bottom: 1px solid var(--border);
-  margin-bottom: 16px;
-  padding: 16px 0 14px;
+  margin-bottom: 10px;
+  padding: 10px 0 8px;
   backdrop-filter: none;
 }
 
 .app-root[data-theme="embl-light"] .brand {
   color: var(--text);
-  font-size: 1.45rem;
+  font-size: 1.35rem;
   font-weight: 600;
-  line-height: 1.25;
-  margin-bottom: 12px;
+  line-height: 1.2;
+  margin-bottom: 8px;
 }
 
 .app-root[data-theme="embl-light"] .nav-links {
-  gap: 4px;
-  margin-bottom: 12px;
+  gap: 2px;
+  margin-bottom: 8px;
 }
 
 .app-root[data-theme="embl-light"] .nav-link {
@@ -92,9 +92,9 @@
   color: var(--text);
   font-weight: 500;
   opacity: 1;
-  padding: 8px 10px;
+  padding: 6px 8px;
   text-decoration: none;
-  border-bottom: 3px solid transparent;
+  border-bottom: 2px solid transparent;
 }
 
 .app-root[data-theme="embl-light"] .nav-link:hover {
@@ -119,11 +119,12 @@
   border: 1px solid var(--border);
   border-radius: 4px;
   box-shadow: none;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .app-root[data-theme="embl-light"] .filter-summary,
 .app-root[data-theme="embl-light"] details > summary {
+  padding: 7px 10px;
   color: var(--text);
   border-bottom-color: var(--border);
   border-radius: 0;
@@ -146,8 +147,8 @@
 }
 
 .app-root[data-theme="embl-light"] .filters-grid {
-  gap: 14px;
-  padding: 14px;
+  gap: 10px;
+  padding: 10px;
 }
 
 .app-root[data-theme="embl-light"] .control-label {
@@ -190,8 +191,9 @@
 }
 
 .app-root[data-theme="embl-light"] .filters-toolbar {
-  border-top: 1px solid var(--border);
-  padding: 12px 14px 14px;
+  border-top: 0;
+  padding: 0 10px 6px;
+  margin-top: -4px;
 }
 
 /* ================================
