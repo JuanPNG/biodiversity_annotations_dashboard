@@ -1,9 +1,16 @@
+"""Build the dashboard's accession-level Parquet table.
+
+This module flattens selected nested fields from the source integrated Parquet
+into one row per accession. Repeated or categorical data that is not naturally
+one-to-one with accession should stay in separate ETL outputs.
+"""
 from __future__ import annotations
 
 import json
 from typing import Any, Dict, List, Optional, Sequence
 import math
 import pandas as pd
+import pyarrow as pa
 import pyarrow.parquet as pq
 
 
@@ -23,18 +30,155 @@ GENE_BIOTYPE_KEYS: Sequence[str] = (
 CLIMATE_VARS: Sequence[str] = ("bio1","bio7","bio12","bio15")
 CLIMATE_STATS: Sequence[str] = ("mean","max","min")
 
+# Accession-level assembly metadata from source column `ena_stats`.
+# Output columns use the pattern `ena_<field>`.
+ENA_STATS_KEYS: Sequence[str] = (
+    "assembly_level",
+    "ungapped_length",
+    "scaffold_n50",
+    "scaffold_count",
+    "contig_n50",
+    "contig_count",
+    "coverage",
+    "spanned_gaps",
+    "unspanned_gaps",
+    "contig_l50",
+    "scaffold_l50",
+    "contig_n75",
+    "contig_n90",
+    "scaffold_n75",
+    "scaffold_n90",
+    "replicon_count",
+    "non_chromosome_replicon_count",
+)
+
+# Accession-level Ensembl statistics from source column `ensembl_stats`.
+# Only the groups listed here are exported. Output columns use:
+# `ens_<group>_<field>`, e.g. `ens_coding_total_transcripts`.
+ENSEMBL_STATS_GROUPS: dict[str, Sequence[str]] = {
+    "assembly": (
+        "contig_n50",
+        "total_genome_length",
+        "total_coding_sequence_length",
+        "total_gap_length",
+        "spanned_gaps",
+        "chromosomes",
+        "toplevel_sequences",
+        "component_sequences",
+        "gc_percentage",
+    ),
+    "coding": (
+        "coding_genes",
+        "average_genomic_span",
+        "average_sequence_length",
+        "average_cds_length",
+        "shortest_gene_length",
+        "longest_gene_length",
+        "total_transcripts",
+        "coding_transcripts",
+        "transcripts_per_gene",
+        "coding_transcripts_per_gene",
+        "total_exons",
+        "total_coding_exons",
+        "average_exon_length",
+        "average_coding_exon_length",
+        "average_exons_per_transcript",
+        "average_coding_exons_per_coding_transcript",
+        "total_introns",
+        "average_intron_length",
+    ),
+    "non_coding": (
+        "non_coding_genes",
+        "small_non_coding_genes",
+        "long_non_coding_genes",
+        "misc_non_coding_genes",
+        "average_genomic_span",
+        "average_sequence_length",
+        "shortest_gene_length",
+        "longest_gene_length",
+        "total_transcripts",
+        "transcripts_per_gene",
+        "total_exons",
+        "average_exon_length",
+        "average_exons_per_transcript",
+        "total_introns",
+        "average_intron_length",
+    ),
+    "pseudogene": (
+        "pseudogenes",
+        "average_genomic_span",
+        "average_sequence_length",
+        "shortest_gene_length",
+        "longest_gene_length",
+        "total_transcripts",
+        "transcripts_per_gene",
+        "total_exons",
+        "average_exon_length",
+        "average_exons_per_transcript",
+        "total_introns",
+        "average_intron_length",
+    ),
+}
+
 # PARQUET_PATH = '../data/original/integ_genome_features_20250812.parquet'
 
 
-def _safe_col(table: pq.Table, name: str) -> List[Any]:
+def _safe_col(table: pa.Table, name: str) -> List[Any]:
     """Return column as a list, or a list of Nones if missing."""
     return table[name].to_pylist() if name in table.column_names else [None] * len(table)
 
 
+def _prefixed_values(
+    data: Any,
+    prefix: str,
+    keys: Sequence[str],
+) -> Dict[str, Any]:
+    """Return selected struct values as flat, prefixed columns.
+
+    Missing structs are represented with explicit None values so every output
+    row has the same accession-level schema.
+    """
+    if not isinstance(data, dict):
+        return {f"{prefix}_{key}": None for key in keys}
+
+    return {f"{prefix}_{key}": data.get(key) for key in keys}
+
+
+def _flatten_ensembl_stats(data: Any) -> Dict[str, Any]:
+    """Flatten the supported nested Ensembl stats groups for one accession."""
+    out: Dict[str, Any] = {}
+
+    if not isinstance(data, dict):
+        for group, keys in ENSEMBL_STATS_GROUPS.items():
+            for key in keys:
+                out[f"ens_{group}_{key}"] = None
+        return out
+
+    source_group_names = {
+        "assembly": "assembly_stats",
+        "coding": "coding_stats",
+        "non_coding": "non_coding_stats",
+        "pseudogene": "pseudogene_stats",
+    }
+
+    for group, keys in ENSEMBL_STATS_GROUPS.items():
+        source_group = data.get(source_group_names[group])
+        out.update(_prefixed_values(source_group, f"ens_{group}", keys))
+
+    return out
+
+
 def build_main_table(parquet_path: str) -> pd.DataFrame:
+    """Build the wide accession-level table consumed by the dashboard.
+
+    The output keeps one row per accession and includes taxonomy, climate,
+    distribution, source URLs, gene biotype summaries, and selected ENA/Ensembl
+    assembly and annotation statistics.
+    """
     wanted = [
-        "accession","taxonomy","gene_biotypes","clim_CHELSA","meta_urls",
-        "range_km2","mean_elevation","min_elevation","max_elevation","median_elevation",
+        "accession", "taxonomy", "gene_biotypes", "clim_CHELSA", "meta_urls",
+        "range_km2", "mean_elevation", "min_elevation", "max_elevation", "median_elevation",
+        "ena_stats", "ensembl_stats",
     ]
     schema = pq.read_schema(parquet_path)
     cols = [c for c in wanted if c in schema.names]
@@ -46,6 +190,8 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
     gene_col = _safe_col(table, "gene_biotypes")
     clim_col = _safe_col(table, "clim_CHELSA")
     urls_col = _safe_col(table, "meta_urls")
+    ena_col = _safe_col(table, "ena_stats")
+    ens_col = _safe_col(table, "ensembl_stats")
 
     rng          = _safe_col(table, "range_km2")
     elev_mean    = _safe_col(table, "mean_elevation")
@@ -65,6 +211,10 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
             "max_elevation":    elev_max[i],
             "median_elevation": elev_median[i],
         }
+
+        # Flatten one-to-one accession stats from nested source structs.
+        out.update(_prefixed_values(ena_col[i], "ena", ENA_STATS_KEYS))
+        out.update(_flatten_ensembl_stats(ens_col[i]))
 
         # Taxonomy
         tax_first = tax_col[i][0] if isinstance(tax_col[i], list) and tax_col[i] else None
@@ -133,10 +283,21 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
         "total_gene_biotypes",
     ]
     biotype_cols = [c for k in GENE_BIOTYPE_KEYS for c in (f"{k}_count", f"{k}_percentage")]
+
+    stats_cols = (
+        [f"ena_{key}" for key in ENA_STATS_KEYS] +
+        [
+            f"ens_{group}_{key}"
+            for group, keys in ENSEMBL_STATS_GROUPS.items()
+            for key in keys
+        ]
+    )
+
     ordered = (
         [c for c in front if c in df.columns] +
         [c for c in biotype_cols if c in df.columns] +
-        [c for c in df.columns if c not in set(front + biotype_cols)]
+        [c for c in stats_cols if c in df.columns] +
+        [c for c in df.columns if c not in set(front + biotype_cols + stats_cols)]
     )
     return df[ordered]
 
