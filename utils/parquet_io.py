@@ -149,18 +149,37 @@ def _build_range_expr(
 
 def list_biotype_columns() -> dict[str, list[str]]:
     """
-    Return {'pct': [...], 'count': [...]} from dashboard_main based on *_percentage and *_count.
-    Excludes items in config.GENE_BIOTYPE_EXCLUDE.
+    Return {'pct': [...], 'count': [...]} for gene biotype columns.
+
+    Only columns whose base name is listed in config.GENE_BIOTYPE_BASES are
+    treated as gene biotypes. This prevents unrelated assembly or annotation
+    stats such as ena_contig_count or ens_assembly_gc_percentage from appearing
+    in biotype KPIs, filters, and plots.
     """
     main_path = config.DATA_DIR / config.DASHBOARD_MAIN_FN
     cols = list_columns(main_path)
 
     pct_sfx = config.GENE_BIOTYPE_PCT_SUFFIX or "_percentage"
     cnt_sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
+    allowed = set(config.GENE_BIOTYPE_BASES or ())
     exclude = set(config.GENE_BIOTYPE_EXCLUDE or ())
 
-    pct = [c for c in cols if c.endswith(pct_sfx) and c not in exclude]
-    cnt = [c for c in cols if c.endswith(cnt_sfx) and c not in exclude]
+    pct = [
+        c
+        for c in cols
+        if c.endswith(pct_sfx)
+        and c not in exclude
+        and c[: -len(pct_sfx)] in allowed
+    ]
+
+    cnt = [
+        c
+        for c in cols
+        if c.endswith(cnt_sfx)
+        and c not in exclude
+        and c[: -len(cnt_sfx)] in allowed
+    ]
+
     return {"pct": pct, "count": cnt}
 
 
