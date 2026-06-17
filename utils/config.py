@@ -1,9 +1,11 @@
 # utils/config.py
 from __future__ import annotations
+
+import os
 from pathlib import Path
 
 # Where the parquet files live
-DATA_DIR = Path("data/processed")
+DATA_DIR = Path(os.getenv("DASHBOARD_DATA_DIR", "data/processed"))
 
 # Filenames (without hard-coding paths elsewhere)
 DASHBOARD_MAIN_FN = "dashboard_main.parquet"
