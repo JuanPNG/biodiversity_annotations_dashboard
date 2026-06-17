@@ -168,6 +168,15 @@ def _flatten_ensembl_stats(data: Any) -> Dict[str, Any]:
     return out
 
 
+def _first_struct(data: Any) -> Dict[str, Any] | None:
+    """Return a struct dict from either current struct or legacy list<struct> input."""
+    if isinstance(data, dict):
+        return data
+    if isinstance(data, list) and data and isinstance(data[0], dict):
+        return data[0]
+    return None
+
+
 def build_main_table(parquet_path: str) -> pd.DataFrame:
     """Build the wide accession-level table consumed by the dashboard.
 
@@ -217,11 +226,11 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
         out.update(_flatten_ensembl_stats(ens_col[i]))
 
         # Taxonomy
-        tax_first = tax_col[i][0] if isinstance(tax_col[i], list) and tax_col[i] else None
-        if isinstance(tax_first, dict):
-            for k in ("kingdom","phylum","class","order","family","genus","species"):
-                out[k] = tax_first.get(k)
-            out["tax_id"] = tax_first.get("tax_id")
+        tax = _first_struct(tax_col[i])
+        if tax is not None:
+            for k in ("kingdom", "phylum", "class", "order", "family", "genus", "species"):
+                out[k] = tax.get(k)
+            out["tax_id"] = tax.get("tax_id")
 
         # Climate
         clim = clim_col[i]
@@ -233,13 +242,12 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
                         out[f"clim_{var}_{stat}"] = vb.get(stat)
 
         # URLs
-        mu = urls_col[i]
-        mu_first = mu[0] if isinstance(mu, list) and mu else None
-        if isinstance(mu_first, dict):
-            out["biodiversity_portal"] = mu_first.get("Biodiversity_portal")
-            out["gtf_file"]            = mu_first.get("GTF")
-            out["ensembl_browser"]     = mu_first.get("Ensembl_browser")
-            out["gbif"]                = mu_first.get("GBIF")
+        mu = _first_struct(urls_col[i])
+        if mu is not None:
+            out["biodiversity_portal"] = mu.get("Biodiversity_portal")
+            out["gtf_file"] = mu.get("GTF")
+            out["ensembl_browser"] = mu.get("Ensembl_browser")
+            out["gbif"] = mu.get("GBIF")
 
         # Gene biotypes
         for k in GENE_BIOTYPE_KEYS:
