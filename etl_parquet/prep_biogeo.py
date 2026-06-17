@@ -1,18 +1,28 @@
+"""Build the dashboard's long-format biogeography Parquet table.
+
+The source integrated Parquet stores realm, biome, and ecoregion values in a
+nested accession-level structure. This module flattens those independent lists
+into one row per accession/level/value combination for filtering and summaries.
+"""
+
 from __future__ import annotations
 
 import json
 from typing import Any, Dict, List, Optional
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pandas as pd
 
 
 # PARQUET_PATH = '../data/integ_genome_features_20250812.parquet'
 
-def _safe_col(table: pq.Table, name: str) -> List[Any]:
+def _safe_col(table: pa.Table, name: str) -> List[Any]:
+    """Return column values as a list, or None placeholders if the column is absent."""
     return table[name].to_pylist() if name in table.column_names else [None] * len(table)
 
+
 def _flat_str_list(v: Any) -> List[str]:
-    """biogeo values are list<array:string>; flatten nested lists -> list[str]."""
+    """Flatten source biogeography values from list<array<string>> to list[str]."""
     out: List[str] = []
     if isinstance(v, list):
         for x in v:
@@ -22,14 +32,18 @@ def _flat_str_list(v: Any) -> List[str]:
                 out.append(str(x))
     return out
 
+
 def build_biogeo_long(parquet_path: str) -> pd.DataFrame:
-    """
-    Create a tidy biogeography table with one level per row:
+    """Create a tidy biogeography table with one level per row.
 
+    Output schema:
         accession | level | value
-        level ∈ {"realm","biome","ecoregion"}
 
-    The source schema has independent lists per level; we do NOT fabricate triplets.
+    Where level is one of:
+        realm, biome, ecoregion
+
+    The source schema stores independent lists per level. This function preserves
+    that meaning and does not fabricate realm/biome/ecoregion triplets.
     """
     wanted = ["accession", "biogeo_Ecoregion"]
     schema = pq.read_schema(parquet_path)
@@ -47,7 +61,7 @@ def build_biogeo_long(parquet_path: str) -> pd.DataFrame:
         if not isinstance(b, dict):
             continue
 
-        # Each block has: {"count": int, "values": list<array<string>>}
+        # Each source block has {"count": int, "values": list<array<string>>}.
         r_vals = _flat_str_list(b.get("realm", {}).get("values") if isinstance(b.get("realm"), dict) else None)
         m_vals = _flat_str_list(b.get("biome", {}).get("values") if isinstance(b.get("biome"), dict) else None)
         e_vals = _flat_str_list(b.get("ecoregion", {}).get("values") if isinstance(b.get("ecoregion"), dict) else None)

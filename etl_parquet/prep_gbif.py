@@ -1,25 +1,50 @@
+"""Build the dashboard's GBIF occurrence Parquet table.
+
+The source integrated Parquet stores GBIF occurrences as a nested list per
+accession. This module explodes that list into one row per occurrence while
+preserving occurrence-level fields used by maps and downstream summaries.
+"""
+
 from __future__ import annotations
 
 import json
 from typing import Any, Dict, List, Optional
+import pyarrow as pa
 import pyarrow.parquet as pq
 import pandas as pd
 
 # PARQUET_PATH = '../data/integ_genome_features_20250812.parquet'
 
-def _safe_col(table: pq.Table, name: str) -> List[Any]:
+def _safe_col(table: pa.Table, name: str) -> List[Any]:
+    """Return column values as a list, or None placeholders if the column is absent."""
     return table[name].to_pylist() if name in table.column_names else [None] * len(table)
 
-def build_gbif_occurrences(parquet_path: str) -> pd.DataFrame:
-    """
-    Explode gbif_occs (list<struct>) to one row per occurrence, preserving fields 'as is'.
 
-    Output columns:
-      accession, occurrenceID, geo_coordinate, geodeticDatum, coordinateUncertaintyInMeters,
-      eventDate, elevation, countryCode, iucnRedListCategory,
-      gadm_level0_name, gadm_level0_gid, gadm_level1_name, gadm_level1_gid,
-      gadm_level2_name, gadm_level2_gid, gadm_level3_name, gadm_level3_gid,
-      institutionCode, collectionCode, catalogNumber
+def build_gbif_occurrences(parquet_path: str) -> pd.DataFrame:
+    """Explode GBIF occurrence records into one row per occurrence.
+
+    Input source column:
+        gbif_occs: list<struct>
+
+    Output schema:
+        accession
+        occurrenceID
+        geo_coordinate
+        geodeticDatum
+        coordinateUncertaintyInMeters
+        eventDate
+        elevation
+        countryCode
+        iucnRedListCategory
+        gadm_level0_name
+        gadm_level1_name
+        gadm_level2_name
+        institutionCode
+        collectionCode
+        catalogNumber
+
+    Nested GADM values are flattened to explicit level-name columns. Other
+    occurrence fields are preserved as provided by the source.
     """
     wanted = ["accession", "gbif_occs"]
     schema = pq.read_schema(parquet_path)
@@ -55,7 +80,7 @@ def build_gbif_occurrences(parquet_path: str) -> pd.DataFrame:
                 "catalogNumber": o.get("catalogNumber"),
             }
 
-            # Expand gadm struct into explicit columns (still “as is”, just flattened)
+            # Expand GADM level structs into explicit name columns.
             gadm = o.get("gadm")
             if isinstance(gadm, dict):
                 for level in ("level0", "level1", "level2"):
