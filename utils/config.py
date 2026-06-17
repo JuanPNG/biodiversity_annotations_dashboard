@@ -85,6 +85,37 @@ GENE_BIOTYPE_PREFIX = ""
 GENE_BIOTYPE_COUNT_SUFFIX = "_count"
 GENE_BIOTYPE_PCT_SUFFIX = "_percentage"
 
+GENE_BIOTYPE_BASES = {
+    "protein_coding",
+    "lncRNA",
+    "rRNA",
+    "tRNA",
+    "miRNA",
+    "pseudogene",
+    "processed_pseudogene",
+    "antisense",
+    "snRNA",
+    "snoRNA",
+    "IG_C_gene",
+    "IG_D_gene",
+    "IG_J_gene",
+    "IG_V_gene",
+    "Mt_rRNA",
+    "Mt_tRNA",
+    "TR_C_gene",
+    "TR_J_gene",
+    "TR_V_gene",
+    "Y_RNA",
+    "misc_RNA",
+    "ribozyme",
+    "scaRNA",
+    "transcribed_processed_pseudogene",
+    "transcribed_unprocessed_pseudogene",
+    "unitary_pseudogene",
+    "unprocessed_pseudogene",
+    "vault_RNA",
+}
+
 # Columns to ignore when detecting biotypes
 GENE_BIOTYPE_EXCLUDE = {"total_gene_biotypes"}
 
