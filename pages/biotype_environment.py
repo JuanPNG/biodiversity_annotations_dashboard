@@ -149,7 +149,7 @@ def layout():
                                 children=[
                                     html.Div(
                                         [
-                                            html.Label("Climate X", className="control-label"),
+                                            html.Label("Climatic variable", className="control-label"),
                                             dcc.Dropdown(
                                                 id="bs-x-climate",
                                                 options=climate_options,
@@ -167,15 +167,16 @@ def layout():
                                             html.Label("Log X", className="control-label"),
                                             dcc.Checklist(
                                                 id="bs-logx-clim",
-                                                options=[{"label": "Enable", "value": "on"}],
+                                                options=[{"label": "", "value": "on"}],
                                                 value=[],
+                                                className="log-x-checklist",
                                                 inputClassName="checkbox-input",
                                                 labelClassName="checkbox-label",
                                                 persistence=True,
                                                 persistence_type="session",
                                             ),
                                         ],
-                                        className="biotype-env-log-toggle",
+                                        className="biotype-env-log-toggle biotype-env-log-inline",
                                     ),
                                 ],
                             ),
@@ -194,7 +195,7 @@ def layout():
                                 children=[
                                     html.Div(
                                         [
-                                            html.Label("Distribution X", className="control-label"),
+                                            html.Label("Distribution variable", className="control-label"),
                                             dcc.Dropdown(
                                                 id="bs-x-dist",
                                                 options=dist_options,
@@ -212,15 +213,16 @@ def layout():
                                             html.Label("Log X", className="control-label"),
                                             dcc.Checklist(
                                                 id="bs-logx-dist",
-                                                options=[{"label": "Enable", "value": "on"}],
+                                                options=[{"label": "", "value": "on"}],
                                                 value=[],
+                                                className="log-x-checklist",
                                                 inputClassName="checkbox-input",
                                                 labelClassName="checkbox-label",
                                                 persistence=True,
                                                 persistence_type="session",
                                             ),
                                         ],
-                                        className="biotype-env-log-toggle",
+                                        className="biotype-env-log-toggle biotype-env-log-inline",
                                     ),
                                 ],
                             ),

@@ -722,6 +722,40 @@
    Biotype vs Environment plot controls
 =================================== */
 
+.app-root[data-theme="embl-light"] .biotype-env-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+  margin: 14px 0;
+  align-items: start;
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-panel {
+  min-width: 0;
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+  margin-bottom: 8px;
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-x-select {
+  min-width: 0;
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-log-toggle {
+  min-width: 96px;
+}
+
+@media (max-width: 1000px) {
+  .app-root[data-theme="embl-light"] .biotype-env-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .app-root[data-theme="embl-light"] #bs-plot-controls .db-controls {
   display: grid;
   grid-template-columns: 1.6fr 1.1fr 1.1fr 0.8fr 1fr;
@@ -795,6 +829,34 @@
   .app-root[data-theme="embl-light"] #bs-plot-controls .db-controls {
     grid-template-columns: 1fr;
   }
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-log-inline {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-height: 34px;
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-log-inline .control-label {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-log-inline .log-x-checklist {
+  align-items: center;
+  display: flex;
+  min-height: 0;
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-log-inline label.checkbox-label {
+  align-items: center;
+  display: flex;
+  margin: 0;
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-log-inline .checkbox-input {
+  margin: 0;
 }
 
 /* Keep the modified footer usable when reverting to the original dark theme. */
