@@ -27,7 +27,7 @@ GBIF_OCCURRENCES_FN = "gbif_occurrences.parquet"  # not used yet in filters
 # ---------------------------------------------------------------------------
 
 # dashboard_main.parquet accession key and taxonomy columns used by global
-# filters, Data Browser, Home KPIs, and Genome Annotations.
+# filters, Data Browser, Home KPIs, and Biotype by Taxa.
 ACCESSION_COL_MAIN = "accession"         # in dashboard_main
 TAXONOMY_COL = None
 TAXONOMY_RANK_COLUMNS = [

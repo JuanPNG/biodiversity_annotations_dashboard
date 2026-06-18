@@ -4,7 +4,7 @@ import dash
 from dash import html, dcc
 from utils import config
 
-dash.register_page(__name__, path="/genome-annotations", name="Genome Annotations")
+dash.register_page(__name__, path="/genome-annotations", name="Biotypes by Taxa")
 
 _ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
 rank_options = [{"label": r.title(), "value": r} for r in _ranks]
@@ -12,7 +12,7 @@ DEFAULT_RANK = "kingdom" if "kingdom" in _ranks else (_ranks[0] if _ranks else N
 
 layout = html.Main(
     [
-        html.H2("Genome Annotations — Gene Biotypes", className="home-section-title"),
+        html.H2("Gene Biotypes by Taxa", className="home-section-title"),
         html.P(
             "This bar chart enables you to explore how the proportion of annotated gene biotypes changes between and within taxonomic groups. "
             "Use the filters above to explore the data and identify species of interest. Use the biogeography and climate filters to find species from similar environments. "

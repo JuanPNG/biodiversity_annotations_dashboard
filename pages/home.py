@@ -90,7 +90,7 @@ nav_cards = html.Div(
         ),
         dcc.Link(
             html.Div(
-                [html.Div("Genome Annotations", className="card-title"),
+                [html.Div("Biotypes by Taxa", className="card-title"),
                  html.Div("Use stacked percentage bar charts to compare species gene biotypes within and between taxa.", className="card-sub")],
                 className="nav-card"
             ),
@@ -99,7 +99,7 @@ nav_cards = html.Div(
         ),
         dcc.Link(
             html.Div(
-                [html.Div("Biotype vs Environment", className="card-title"),
+                [html.Div("Biotypes vs Environment", className="card-title"),
                  html.Div("Use scatter plots to examine the gene biotypes in relation to the species' environment and distribution.", className="card-sub")],
                 className="nav-card"
             ),

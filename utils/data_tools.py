@@ -10,7 +10,7 @@
 # - Home KPIs helpers
 # - Data Browser helpers
 # - Biotype vs Environment helpers
-# - Genome Annotations helpers
+# - Biotype by Taxa helpers
 # -----------------------------------------------------------------------------
 import math
 from functools import lru_cache

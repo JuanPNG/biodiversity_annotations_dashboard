@@ -128,7 +128,7 @@ def layout():
 
     return html.Main(
         [
-            html.H2("Biotype vs Environment", className="home-section-title"),
+            html.H2("Biotypes vs Environment", className="home-section-title"),
             html.P(
                 "Compare selected gene biotypes with climate and distribution variables. "
                 "Use Plot controls to choose biotypes, change the Y-axis metric, add trendlines, and adjust point display.",

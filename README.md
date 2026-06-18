@@ -74,7 +74,7 @@ flowchart TD
     G --> I["Page callbacks"]
 
     D --> I
-    I --> J["Dash pages<br/>Home, Data Browser,<br/>Genome Annotations,<br/>Biotype vs Environment"]
+    I --> J["Dash pages<br/>Home, Data Browser,<br/>Biotypes by Taxa,<br/>Biotypes vs Environment"]
 ```
 
 
@@ -131,7 +131,7 @@ Set the key settings used across the app in `utils/config.py`
 * Clickable links for URL columns (via built-in markdown renderer)
 * Status line: page, size, rows returned, filtered total, and active ranks
 
-#### Genome Annotations
+#### Biotype by Taxa
 
 * 100% stacked horizontal bar chart of gene biotype composition per selected taxon rank
 * Uses the precomputed `*_percentage` column or in absence uses `*_count` columns to percentages per group; if total_gene_biotypes exists, we normalise by it (stacks reflect true totals; may sum <100% if not all genes are in tracked biotypes)
@@ -140,7 +140,7 @@ Set the key settings used across the app in `utils/config.py`
 * Honors global filters
 * Default grouping: Kingdom
 
-#### Biotype vs Environment
+#### Biotypes vs Environment
 
 * two scatter plots (climate vs biotype, distribution vs biotype)
 * Optional climate variable and distribution variable on X axis. 
