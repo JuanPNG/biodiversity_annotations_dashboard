@@ -100,7 +100,7 @@ def _make_fig(
 ) -> go.Figure:
     fig = go.Figure()
     if not xcol or df.empty:
-        fig.update_layout(title=title, height=520, width=800, margin=dict(l=10, r=10, t=40, b=10))
+        fig.update_layout(title=title, height=520, margin=dict(l=10, r=10, t=95, b=45))
         apply_embl_theme(fig)
         return fig
 
@@ -160,18 +160,18 @@ def _make_fig(
                 ))
 
     fig.update_layout(
-        margin=dict(l=10, r=10, t=60, b=70),
+        margin=dict(l=10, r=10, t=80, b=45),
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.18,
+            y=1.08,
             xanchor="left",
             x=0,
             tracegroupgap=8,
         ),
         title=dict(text=title, x=0.01, y=0.98),
         height=520,
-        autosize=False,
+        autosize=True,
     )
     fig.update_xaxes(title_text=ui_label_for_column(xcol), type=("log" if logx else "linear"), rangemode="tozero")
     fig.update_yaxes(title_text=y_axis_title, type=("log" if logy else "linear"), rangemode="tozero")
@@ -222,7 +222,7 @@ def render_scatter(biotype_cols, y_metric, reg_flags, size_flags, point_cap,
     biotype_cols = list(biotype_cols or [])
     if not biotype_cols:
         empty = go.Figure()
-        empty.update_layout(height=520, width=800)
+        empty.update_layout(height=520)
         apply_embl_theme(empty)
         return empty, empty, "Select at least one biotype."
 
