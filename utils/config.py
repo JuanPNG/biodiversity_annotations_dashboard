@@ -56,7 +56,7 @@ BIOGEO_LEVELS_TO_EXPOSE = ["realm", "biome", "ecoregion"]
 
 # Preset columns
 PRESET_COLUMN_GROUPS = {
-    "genome": [
+    "ensembl_biotypes": [
         "accession", "species", "total_gene_biotypes",
         "protein_coding_count", # "protein_coding_percentage",
         "lncRNA_count", # "lncRNA_percentage",
@@ -70,6 +70,31 @@ PRESET_COLUMN_GROUPS = {
         "snoRNA_count", # "snoRNA_percentage",
         "gtf_file", "biodiversity_portal", "ensembl_browser"
     ],
+    "ensembl_assembly": [
+        "accession",
+        "species",
+        "ens_assembly_*",
+    ],
+    "ensembl_coding": [
+        "accession",
+        "species",
+        "ens_coding_*",
+    ],
+    "ensembl_non_coding": [
+        "accession",
+        "species",
+        "ens_non_coding_*",
+    ],
+    "ensembl_pseudogene": [
+        "accession",
+        "species",
+        "ens_pseudogene_*",
+    ],
+    "ena_assembly_metrics": [
+        "accession",
+        "species",
+        "ena_*",
+    ],
     "taxonomy": ["accession", "tax_id", "kingdom", "phylum", "class", "order", "family", "genus", "species"],
     "bioclimate": ["accession", "species", "clim_bio1_mean", "clim_bio1_max", "clim_bio1_min", "clim_bio7_mean",
                    "clim_bio7_max", "clim_bio7_min", "clim_bio12_mean", "clim_bio12_max", "clim_bio12_min",
@@ -78,7 +103,7 @@ PRESET_COLUMN_GROUPS = {
     "sources": ["accession", "species", "biodiversity_portal", "gtf_file", "ensembl_browser", "gbif"]
 }
 
-DEFAULT_COLUMN_PRESET = "genome"
+DEFAULT_COLUMN_PRESET = "ensembl_biotypes"
 
 # Gene biotype column naming
 GENE_BIOTYPE_PREFIX = ""
