@@ -502,12 +502,30 @@ def db_make_column_defs(df: pd.DataFrame) -> list[dict]:
 
 def ui_label_for_column(col: str) -> str:
     """
-    Return a human-readable label for any known column using config.COLUMN_LABELS.
-    Falls back to the raw column name.
+    Return a human-readable label for dashboard columns.
+
+    Explicit labels in config.COLUMN_LABELS win first. ENA and Ensembl stats
+    then drop the source/group prefix for compact Data Browser display while
+    keeping the underlying Parquet field name unchanged.
     """
     from utils import config
-    m = getattr(config, "COLUMN_LABELS", {})
-    return m.get(col, col)
+
+    labels = getattr(config, "COLUMN_LABELS", {})
+    if col in labels:
+        return labels[col]
+
+    compact_prefixes = (
+        "ena_",
+        "ens_assembly_",
+        "ens_coding_",
+        "ens_non_coding_",
+        "ens_pseudogene_",
+    )
+    for prefix in compact_prefixes:
+        if col.startswith(prefix):
+            return col.removeprefix(prefix)
+
+    return col
 
 
 # ---------------------------------------------------------------------------
