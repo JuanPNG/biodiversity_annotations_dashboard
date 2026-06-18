@@ -734,43 +734,47 @@
   min-width: 0;
 }
 
-.app-root[data-theme="embl-light"] .biotype-env-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: end;
-  margin-bottom: 8px;
-}
-
-.app-root[data-theme="embl-light"] .biotype-env-x-select {
-  min-width: 0;
-}
-
-.app-root[data-theme="embl-light"] .biotype-env-log-toggle {
-  min-width: 96px;
-}
-
 @media (max-width: 1000px) {
   .app-root[data-theme="embl-light"] .biotype-env-grid {
     grid-template-columns: 1fr;
   }
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .db-controls {
+.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-plot-controls {
   display: grid;
-  grid-template-columns: 1.6fr 1.1fr 1.1fr 0.8fr 1fr;
-  gap: 8px 14px;
+  gap: 14px;
   margin: 0;
-  padding: 8px 14px 10px;
+  padding: 10px 14px 14px;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row {
+  align-items: start;
+  display: grid;
+  gap: 12px 18px;
+  min-width: 0;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--primary {
+  grid-template-columns: minmax(320px, 1fr) max-content max-content;
+  justify-content: start;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--x {
+  grid-template-columns: minmax(260px, 1fr) max-content minmax(260px, 1fr) max-content;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--x .biotype-env-log-inline {
+  margin-top: 27px;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--display {
+  grid-template-columns: max-content max-content 160px;
+  justify-content: start;
 }
 
 .app-root[data-theme="embl-light"] #bs-plot-controls .db-control {
   align-self: start;
   min-width: 0;
-}
-
-.app-root[data-theme="embl-light"] #bs-plot-controls .db-control:first-child {
-  grid-column: 1 / -1;
 }
 
 .app-root[data-theme="embl-light"] #bs-plot-controls .control-label {
@@ -787,6 +791,10 @@
   display: flex;
   flex-wrap: wrap;
   gap: 6px 18px;
+}
+
+.app-root[data-theme="embl-light"] #bs-plot-controls #bs-y-metric {
+  flex-wrap: nowrap;
 }
 
 .app-root[data-theme="embl-light"] #bs-plot-controls .radio-input,
@@ -820,13 +828,17 @@
 }
 
 @media (max-width: 900px) {
-  .app-root[data-theme="embl-light"] #bs-plot-controls .db-controls {
+  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--primary,
+  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--x,
+  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--display {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
 }
 
 @media (max-width: 560px) {
-  .app-root[data-theme="embl-light"] #bs-plot-controls .db-controls {
+  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--primary,
+  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--x,
+  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--display {
     grid-template-columns: 1fr;
   }
 }
