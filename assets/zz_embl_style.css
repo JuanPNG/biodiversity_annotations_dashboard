@@ -224,8 +224,9 @@
 }
 
 .app-root[data-theme="embl-light"] .page-container > .home-section:last-child {
+  border-bottom: 0;
   margin-bottom: 0;
-  padding-bottom: 12px;
+  padding-bottom: 0;
 }
 
 .app-root[data-theme="embl-light"] .page-container > .home-section:first-child {
@@ -636,10 +637,11 @@
 .app-root[data-theme="embl-light"] .site-footer {
   background: #ffffff;
   border: 0;
+  border-top: 1px solid var(--border);
   border-radius: 0;
   box-shadow: none;
   margin-top: 12px !important;
-  padding: 0 0 16px;
+  padding: 12px 0 16px;
 }
 
 .app-root[data-theme="embl-light"] .footer-content {
