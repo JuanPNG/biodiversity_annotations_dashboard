@@ -139,76 +139,100 @@ def layout():
 
             # Panel A: Climate (controls on the side)
             html.Div(
-                className="viz-split",
+                className="biotype-env-grid",
                 children=[
-                    html.Div(
-                        className="panel",
+                    html.Section(
+                        className="biotype-env-panel",
                         children=[
-                            html.H4("Climate X", className="panel-title"),
-                            dcc.Dropdown(
-                                id="bs-x-climate",
-                                options=climate_options,   # <— use friendly labels
-                                value=CLIMATE_X_CHOICES[0],
-                                clearable=False,
-                                persistence=True, persistence_type="session",
-                                style={"width": "100%"},
+                            html.Div(
+                                className="biotype-env-controls",
+                                children=[
+                                    html.Div(
+                                        [
+                                            html.Label("Climate X", className="control-label"),
+                                            dcc.Dropdown(
+                                                id="bs-x-climate",
+                                                options=climate_options,
+                                                value=CLIMATE_X_CHOICES[0],
+                                                clearable=False,
+                                                persistence=True,
+                                                persistence_type="session",
+                                                style={"width": "100%"},
+                                            ),
+                                        ],
+                                        className="biotype-env-x-select",
+                                    ),
+                                    html.Div(
+                                        [
+                                            html.Label("Log X", className="control-label"),
+                                            dcc.Checklist(
+                                                id="bs-logx-clim",
+                                                options=[{"label": "Enable", "value": "on"}],
+                                                value=[],
+                                                inputClassName="checkbox-input",
+                                                labelClassName="checkbox-label",
+                                                persistence=True,
+                                                persistence_type="session",
+                                            ),
+                                        ],
+                                        className="biotype-env-log-toggle",
+                                    ),
+                                ],
                             ),
-                            html.Div(style={"height": 8}),
-                            html.Label("Log X", className="control-label"),
-                            dcc.Checklist(
-                                id="bs-logx-clim",
-                                options=[{"label": "Enable", "value": "on"}],
-                                value=[],  # unchecked by default
-                                inputClassName="checkbox-input",
-                                labelClassName="checkbox-label",
-                                persistence=True, persistence_type="session",
+                            dcc.Graph(
+                                id="bs-fig-climate",
+                                config={"displayModeBar": False, "responsive": True},
+                                style={"height": "520px", "width": "100%"},
                             ),
                         ],
                     ),
-                    dcc.Graph(
-                        id="bs-fig-climate",
-                        config={"displayModeBar": False, "responsive": False},
-                        style={"height": "520px", "width": "800px"},
-                    ),
-                ],
-            ),
-
-            # Panel B: Distribution (controls on the side)
-            html.Div(
-                className="viz-split",
-                children=[
-                    html.Div(
-                        className="panel",
+                    html.Section(
+                        className="biotype-env-panel",
                         children=[
-                            html.H4("Distribution X", className="panel-title"),
-                            dcc.Dropdown(
-                                id="bs-x-dist",
-                                options=dist_options,
-                                value=DIST_X_CHOICES[0],
-                                clearable=False,
-                                persistence=True, persistence_type="session",
-                                style={"width": "100%"},
+                            html.Div(
+                                className="biotype-env-controls",
+                                children=[
+                                    html.Div(
+                                        [
+                                            html.Label("Distribution X", className="control-label"),
+                                            dcc.Dropdown(
+                                                id="bs-x-dist",
+                                                options=dist_options,
+                                                value=DIST_X_CHOICES[0],
+                                                clearable=False,
+                                                persistence=True,
+                                                persistence_type="session",
+                                                style={"width": "100%"},
+                                            ),
+                                        ],
+                                        className="biotype-env-x-select",
+                                    ),
+                                    html.Div(
+                                        [
+                                            html.Label("Log X", className="control-label"),
+                                            dcc.Checklist(
+                                                id="bs-logx-dist",
+                                                options=[{"label": "Enable", "value": "on"}],
+                                                value=[],
+                                                inputClassName="checkbox-input",
+                                                labelClassName="checkbox-label",
+                                                persistence=True,
+                                                persistence_type="session",
+                                            ),
+                                        ],
+                                        className="biotype-env-log-toggle",
+                                    ),
+                                ],
                             ),
-                            html.Div(style={"height": 8}),
-                            html.Label("Log X", className="control-label"),
-                            dcc.Checklist(
-                                id="bs-logx-dist",
-                                options=[{"label": "Enable", "value": "on"}],
-                                value=[],  # unchecked by default
-                                inputClassName="checkbox-input",
-                                labelClassName="checkbox-label",
-                                persistence=True, persistence_type="session",
+                            dcc.Graph(
+                                id="bs-fig-dist",
+                                config={"displayModeBar": False, "responsive": True},
+                                style={"height": "520px", "width": "100%"},
                             ),
                         ],
                     ),
-                    dcc.Graph(
-                        id="bs-fig-dist",
-                        config={"displayModeBar": False, "responsive": False},
-                        style={"height": "520px", "width": "800px"},
-                    ),
                 ],
             ),
-
             html.Div(id="bs-status", className="status-line"),
         ],
         className="page-container",
