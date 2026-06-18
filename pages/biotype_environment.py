@@ -29,158 +29,174 @@ def layout():
                 [
                     html.Div(
                         [
-                            html.Label("Biotypes (Y)", className="control-label"),
-                            dcc.Dropdown(
-                                id="bs-biotypes",
-                                options=[],   # populated by callback
-                                value=[],     # populated by callback
-                                multi=True,
-                                placeholder="Choose 1–6 biotypes…",
-                                persistence=True, persistence_type="session",
-                                style={"width": "100%"},
-                            ),
-                        ],
-                        className="db-control db-control--wide",
-                    ),
-                    html.Div(
-                        [
-                            html.Label("Climate variable", className="control-label"),
-                            dcc.Dropdown(
-                                id="bs-x-climate",
-                                options=climate_options,
-                                value=CLIMATE_X_CHOICES[0],
-                                clearable=False,
-                                persistence=True,
-                                persistence_type="session",
-                                style={"width": "100%"},
-                            ),
-                        ],
-                        className="db-control db-control--wide",
-                    ),
-                    html.Div(
-                        [
-                            html.Label("Distribution variable", className="control-label"),
-                            dcc.Dropdown(
-                                id="bs-x-dist",
-                                options=dist_options,
-                                value=DIST_X_CHOICES[0],
-                                clearable=False,
-                                persistence=True,
-                                persistence_type="session",
-                                style={"width": "100%"},
-                            ),
-                        ],
-                        className="db-control db-control--wide",
-                    ),
-                    html.Div(
-                        [
-                            html.Label("Y metric", className="control-label"),
-                            dcc.RadioItems(
-                                id="bs-y-metric",
-                                options=[
-                                    {"label": "Per-1k genes", "value": "per1k"},
-                                    {"label": "Percentage",   "value": "percentage"},
-                                    {"label": "Raw count",    "value": "raw"},
+                            html.Div(
+                                [
+                                    html.Label("Biotypes (Y)", className="control-label"),
+                                    dcc.Dropdown(
+                                        id="bs-biotypes",
+                                        options=[],   # populated by callback
+                                        value=[],     # populated by callback
+                                        multi=True,
+                                        placeholder="Choose 1–6 biotypes…",
+                                        persistence=True, persistence_type="session",
+                                        style={"width": "100%"},
+                                    ),
                                 ],
-                                value="per1k",
-                                inputClassName="radio-input",
-                                labelClassName="radio-label",
-                                persistence=True, persistence_type="session",
+                                className="db-control db-control--wide",
+                            ),
+                            html.Div(
+                                [
+                                    html.Label("Y metric", className="control-label"),
+                                    dcc.RadioItems(
+                                        id="bs-y-metric",
+                                        options=[
+                                            {"label": "Per-1k genes", "value": "per1k"},
+                                            {"label": "Percentage",   "value": "percentage"},
+                                            {"label": "Raw count",    "value": "raw"},
+                                        ],
+                                        value="per1k",
+                                        inputClassName="radio-input",
+                                        labelClassName="radio-label",
+                                        persistence=True, persistence_type="session",
+                                    ),
+                                ],
+                                className="db-control db-control--narrow",
+                            ),
+                            html.Div(
+                                [
+                                    html.Label("Log Y", className="control-label"),
+                                    dcc.Checklist(
+                                        id="bs-logy",
+                                        options=[{"label": "", "value": "on"}],
+                                        value=[],
+                                        className="log-x-checklist",
+                                        inputClassName="checkbox-input",
+                                        labelClassName="checkbox-label",
+                                        persistence=True, persistence_type="session",
+                                    ),
+                                ],
+                                className="db-control biotype-env-log-inline",
                             ),
                         ],
-                        className="db-control db-control--narrow",
+                        className="biotype-env-control-row biotype-env-control-row--primary",
                     ),
                     html.Div(
                         [
-                            html.Label("Trendlines", className="control-label"),
-                            dcc.Checklist(
-                                id="bs-reg",
-                                options=[{"label": "OLS per biotype", "value": "ols"}],
-                                value=[],
-                                inputClassName="checkbox-input",
-                                labelClassName="checkbox-label",
-                                persistence=True, persistence_type="session",
+                            html.Div(
+                                [
+                                    html.Label("Climate variable (X)", className="control-label"),
+                                    dcc.Dropdown(
+                                        id="bs-x-climate",
+                                        options=climate_options,
+                                        value=CLIMATE_X_CHOICES[0],
+                                        clearable=False,
+                                        persistence=True,
+                                        persistence_type="session",
+                                        style={"width": "100%"},
+                                    ),
+                                ],
+                                className="db-control db-control--wide",
+                            ),
+                            html.Div(
+                                [
+                                    html.Label("Log X", className="control-label"),
+                                    dcc.Checklist(
+                                        id="bs-logx-clim",
+                                        options=[{"label": "", "value": "on"}],
+                                        value=[],
+                                        className="log-x-checklist",
+                                        inputClassName="checkbox-input",
+                                        labelClassName="checkbox-label",
+                                        persistence=True,
+                                        persistence_type="session",
+                                    ),
+                                ],
+                                className="db-control biotype-env-log-inline",
+                            ),
+                            html.Div(
+                                [
+                                    html.Label("Distribution variable (X)", className="control-label"),
+                                    dcc.Dropdown(
+                                        id="bs-x-dist",
+                                        options=dist_options,
+                                        value=DIST_X_CHOICES[0],
+                                        clearable=False,
+                                        persistence=True,
+                                        persistence_type="session",
+                                        style={"width": "100%"},
+                                    ),
+                                ],
+                                className="db-control db-control--wide",
+                            ),
+                            html.Div(
+                                [
+                                    html.Label("Log X", className="control-label"),
+                                    dcc.Checklist(
+                                        id="bs-logx-dist",
+                                        options=[{"label": "", "value": "on"}],
+                                        value=[],
+                                        className="log-x-checklist",
+                                        inputClassName="checkbox-input",
+                                        labelClassName="checkbox-label",
+                                        persistence=True,
+                                        persistence_type="session",
+                                    ),
+                                ],
+                                className="db-control biotype-env-log-inline",
                             ),
                         ],
-                        className="db-control db-control--narrow",
+                        className="biotype-env-control-row biotype-env-control-row--x",
                     ),
                     html.Div(
                         [
-                            html.Label("Point size", className="control-label"),
-                            dcc.Checklist(
-                                id="bs-size",
-                                options=[{"label": "Size by total genes", "value": "size_total"}],
-                                value=[],
-                                inputClassName="checkbox-input",
-                                labelClassName="checkbox-label",
-                                persistence=True, persistence_type="session",
+                            html.Div(
+                                [
+                                    html.Label("Trendlines", className="control-label"),
+                                    dcc.Checklist(
+                                        id="bs-reg",
+                                        options=[{"label": "OLS per biotype", "value": "ols"}],
+                                        value=[],
+                                        inputClassName="checkbox-input",
+                                        labelClassName="checkbox-label",
+                                        persistence=True, persistence_type="session",
+                                    ),
+                                ],
+                                className="db-control db-control--narrow",
+                            ),
+                            html.Div(
+                                [
+                                    html.Label("Point size", className="control-label"),
+                                    dcc.Checklist(
+                                        id="bs-size",
+                                        options=[{"label": "Size by total genes", "value": "size_total"}],
+                                        value=[],
+                                        inputClassName="checkbox-input",
+                                        labelClassName="checkbox-label",
+                                        persistence=True, persistence_type="session",
+                                    ),
+                                ],
+                                className="db-control db-control--narrow",
+                            ),
+                            html.Div(
+                                [
+                                    html.Label("Point cap (0 = all)", className="control-label"),
+                                    dcc.Input(
+                                        id="bs-cap",
+                                        type="number",
+                                        min=0,
+                                        step=1000,
+                                        value=0,
+                                        persistence=True, persistence_type="session",
+                                        style={"width": "100%"},
+                                    ),
+                                ],
+                                className="db-control db-control--narrow",
                             ),
                         ],
-                        className="db-control db-control--narrow",
-                    ),
-                    html.Div(
-                        [
-                            html.Label("Climate Log X", className="control-label"),
-                            dcc.Checklist(
-                                id="bs-logx-clim",
-                                options=[{"label": "", "value": "on"}],
-                                value=[],
-                                className="log-x-checklist",
-                                inputClassName="checkbox-input",
-                                labelClassName="checkbox-label",
-                                persistence=True,
-                                persistence_type="session",
-                            ),
-                        ],
-                        className="db-control biotype-env-log-inline",
-                    ),
-                    html.Div(
-                        [
-                            html.Label("Distribution Log X", className="control-label"),
-                            dcc.Checklist(
-                                id="bs-logx-dist",
-                                options=[{"label": "", "value": "on"}],
-                                value=[],
-                                className="log-x-checklist",
-                                inputClassName="checkbox-input",
-                                labelClassName="checkbox-label",
-                                persistence=True,
-                                persistence_type="session",
-                            ),
-                        ],
-                        className="db-control biotype-env-log-inline",
-                    ),
-                    html.Div(
-                        [
-                            html.Label("Log Y", className="control-label"),
-                            dcc.Checklist(
-                                id="bs-logy",
-                                options=[{"label": "Enable", "value": "on"}],
-                                value=[],
-                                inputClassName="checkbox-input",
-                                labelClassName="checkbox-label",
-                                persistence=True, persistence_type="session",
-                            ),
-                        ],
-                        className="db-control db-control--narrow",
-                    ),
-                    html.Div(
-                        [
-                            html.Label("Point cap (0 = all)", className="control-label"),
-                            dcc.Input(
-                                id="bs-cap",
-                                type="number",
-                                min=0,
-                                step=1000,
-                                value=0,
-                                persistence=True, persistence_type="session",
-                                style={"width": "100%"},
-                            ),
-                        ],
-                        className="db-control db-control--narrow",
+                        className="biotype-env-control-row biotype-env-control-row--display",
                     ),
                 ],
-                className="db-controls",  # reuse your existing row styling inside the collapsible
+                className="biotype-env-plot-controls",
             ),
         ],
         id="bs-plot-controls",
