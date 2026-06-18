@@ -44,6 +44,36 @@ def layout():
                     ),
                     html.Div(
                         [
+                            html.Label("Climate variable", className="control-label"),
+                            dcc.Dropdown(
+                                id="bs-x-climate",
+                                options=climate_options,
+                                value=CLIMATE_X_CHOICES[0],
+                                clearable=False,
+                                persistence=True,
+                                persistence_type="session",
+                                style={"width": "100%"},
+                            ),
+                        ],
+                        className="db-control db-control--wide",
+                    ),
+                    html.Div(
+                        [
+                            html.Label("Distribution variable", className="control-label"),
+                            dcc.Dropdown(
+                                id="bs-x-dist",
+                                options=dist_options,
+                                value=DIST_X_CHOICES[0],
+                                clearable=False,
+                                persistence=True,
+                                persistence_type="session",
+                                style={"width": "100%"},
+                            ),
+                        ],
+                        className="db-control db-control--wide",
+                    ),
+                    html.Div(
+                        [
                             html.Label("Y metric", className="control-label"),
                             dcc.RadioItems(
                                 id="bs-y-metric",
@@ -87,6 +117,38 @@ def layout():
                             ),
                         ],
                         className="db-control db-control--narrow",
+                    ),
+                    html.Div(
+                        [
+                            html.Label("Climate Log X", className="control-label"),
+                            dcc.Checklist(
+                                id="bs-logx-clim",
+                                options=[{"label": "", "value": "on"}],
+                                value=[],
+                                className="log-x-checklist",
+                                inputClassName="checkbox-input",
+                                labelClassName="checkbox-label",
+                                persistence=True,
+                                persistence_type="session",
+                            ),
+                        ],
+                        className="db-control biotype-env-log-inline",
+                    ),
+                    html.Div(
+                        [
+                            html.Label("Distribution Log X", className="control-label"),
+                            dcc.Checklist(
+                                id="bs-logx-dist",
+                                options=[{"label": "", "value": "on"}],
+                                value=[],
+                                className="log-x-checklist",
+                                inputClassName="checkbox-input",
+                                labelClassName="checkbox-label",
+                                persistence=True,
+                                persistence_type="session",
+                            ),
+                        ],
+                        className="db-control biotype-env-log-inline",
                     ),
                     html.Div(
                         [
@@ -137,49 +199,13 @@ def layout():
 
             plot_controls_group,
 
-            # Panel A: Climate (controls on the side)
+            # Plot panels. X-variable controls live in Plot controls above.
             html.Div(
                 className="biotype-env-grid",
                 children=[
                     html.Section(
                         className="biotype-env-panel",
                         children=[
-                            html.Div(
-                                className="biotype-env-controls",
-                                children=[
-                                    html.Div(
-                                        [
-                                            html.Label("Climatic variable", className="control-label"),
-                                            dcc.Dropdown(
-                                                id="bs-x-climate",
-                                                options=climate_options,
-                                                value=CLIMATE_X_CHOICES[0],
-                                                clearable=False,
-                                                persistence=True,
-                                                persistence_type="session",
-                                                style={"width": "100%"},
-                                            ),
-                                        ],
-                                        className="biotype-env-x-select",
-                                    ),
-                                    html.Div(
-                                        [
-                                            html.Label("Log X", className="control-label"),
-                                            dcc.Checklist(
-                                                id="bs-logx-clim",
-                                                options=[{"label": "", "value": "on"}],
-                                                value=[],
-                                                className="log-x-checklist",
-                                                inputClassName="checkbox-input",
-                                                labelClassName="checkbox-label",
-                                                persistence=True,
-                                                persistence_type="session",
-                                            ),
-                                        ],
-                                        className="biotype-env-log-toggle biotype-env-log-inline",
-                                    ),
-                                ],
-                            ),
                             dcc.Graph(
                                 id="bs-fig-climate",
                                 config={"displayModeBar": False, "responsive": True},
@@ -190,42 +216,6 @@ def layout():
                     html.Section(
                         className="biotype-env-panel",
                         children=[
-                            html.Div(
-                                className="biotype-env-controls",
-                                children=[
-                                    html.Div(
-                                        [
-                                            html.Label("Distribution variable", className="control-label"),
-                                            dcc.Dropdown(
-                                                id="bs-x-dist",
-                                                options=dist_options,
-                                                value=DIST_X_CHOICES[0],
-                                                clearable=False,
-                                                persistence=True,
-                                                persistence_type="session",
-                                                style={"width": "100%"},
-                                            ),
-                                        ],
-                                        className="biotype-env-x-select",
-                                    ),
-                                    html.Div(
-                                        [
-                                            html.Label("Log X", className="control-label"),
-                                            dcc.Checklist(
-                                                id="bs-logx-dist",
-                                                options=[{"label": "", "value": "on"}],
-                                                value=[],
-                                                className="log-x-checklist",
-                                                inputClassName="checkbox-input",
-                                                labelClassName="checkbox-label",
-                                                persistence=True,
-                                                persistence_type="session",
-                                            ),
-                                        ],
-                                        className="biotype-env-log-toggle biotype-env-log-inline",
-                                    ),
-                                ],
-                            ),
                             dcc.Graph(
                                 id="bs-fig-dist",
                                 config={"displayModeBar": False, "responsive": True},
