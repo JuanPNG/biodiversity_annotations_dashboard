@@ -1,10 +1,20 @@
-# utils/config.py
+"""Central dashboard configuration.
+
+This file defines dataset paths, canonical column names, UI labels, Data Browser
+column presets, and gene biotype discovery rules. Keep values here declarative:
+runtime logic should live in utils/parquet_io.py, utils/data_tools.py, or callbacks.
+"""
+
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
-# Where the parquet files live
+# ---------------------------------------------------------------------------
+# Data locations
+# ---------------------------------------------------------------------------
+# The app reads processed Parquet files from this directory. Set
+# DASHBOARD_DATA_DIR to test a generated review folder without changing code.
 DATA_DIR = Path(os.getenv("DASHBOARD_DATA_DIR", "data/processed"))
 
 # Filenames (without hard-coding paths elsewhere)
@@ -12,7 +22,12 @@ DASHBOARD_MAIN_FN = "dashboard_main.parquet"
 BIOGEO_LONG_FN = "biogeo_long.parquet"
 GBIF_OCCURRENCES_FN = "gbif_occurrences.parquet"  # not used yet in filters
 
-# === Tell the app your actual column names here ===
+# ---------------------------------------------------------------------------
+# Processed table column contract
+# ---------------------------------------------------------------------------
+
+# dashboard_main.parquet accession key and taxonomy columns used by global
+# filters, Data Browser, Home KPIs, and Genome Annotations.
 ACCESSION_COL_MAIN = "accession"         # in dashboard_main
 TAXONOMY_COL = None
 TAXONOMY_RANK_COLUMNS = [
@@ -22,11 +37,15 @@ TAXONOMY_RANK_COLUMNS = [
 # Climate label (TODO: Kopen classification)
 CLIMATE_LABEL_COL = "clim_bio1_mean" # Provisional
 
-# Human-readable labels for climate variables (used in the UI).
-# Keys are the actual column names in `dashboard_main.parquet`.
+# ---------------------------------------------------------------------------
+# Human-readable labels
+# ---------------------------------------------------------------------------
+
+# Used by Data Browser headers/dropdowns and other UI helpers. Keys must be
+# actual dashboard_main.parquet column names.
 COLUMN_LABELS: dict[str, str] = {
     # Climate variables
-    "clim_bio1_mean": " Mean Annual Mean Temperature (°C)",
+    "clim_bio1_mean": "Mean Annual Mean Temperature (°C)",
     "clim_bio1_max":  "Max Annual Mean Temperature (°C)",
     "clim_bio1_min":  "Min Annual Mean Temperature (°C)",
     "clim_bio12_mean": "Mean Annual Precipitation (mm)",
@@ -48,13 +67,18 @@ COLUMN_LABELS: dict[str, str] = {
 }
 
 
-# Biogeographic region label column in biogeo_long
+# biogeo_long.parquet columns used by global biogeography filters and KPIs.
 ACCESSION_COL_BIOGEO = "accession"       # in biogeo_long
 BIOGEO_LEVEL_COL = "level"
 BIOGEO_VALUE_COL = "value"
 BIOGEO_LEVELS_TO_EXPOSE = ["realm", "biome", "ecoregion"]
 
-# Preset columns
+# ---------------------------------------------------------------------------
+# Data Browser column presets
+# ---------------------------------------------------------------------------
+
+# Used by callbacks/data_browser_callbacks.py. Values can be exact column names
+# or prefix wildcards ending in "*", resolved by utils.data_tools.resolve_preset_columns.
 PRESET_COLUMN_GROUPS = {
     "ensembl_biotypes": [
         "accession", "species", "total_gene_biotypes",
@@ -105,7 +129,14 @@ PRESET_COLUMN_GROUPS = {
 
 DEFAULT_COLUMN_PRESET = "ensembl_biotypes"
 
-# Gene biotype column naming
+# ---------------------------------------------------------------------------
+# Gene biotype detection
+# ---------------------------------------------------------------------------
+
+# Used by utils.parquet_io.list_biotype_columns() to decide which *_count and
+# *_percentage columns are true gene biotypes. This prevents ENA/Ensembl metrics
+# such as ena_contig_count or ens_assembly_gc_percentage from appearing as
+# biotypes in KPIs, filters, and plots.
 GENE_BIOTYPE_PREFIX = ""
 GENE_BIOTYPE_COUNT_SUFFIX = "_count"
 GENE_BIOTYPE_PCT_SUFFIX = "_percentage"
@@ -144,7 +175,9 @@ GENE_BIOTYPE_BASES = {
 # Columns to ignore when detecting biotypes
 GENE_BIOTYPE_EXCLUDE = {"total_gene_biotypes"}
 
-# Columns that contain URLs (rendered as clickable links in the grid)
+# ---------------------------------------------------------------------------
+# Data Browser rendering and biotype normalization
+# ---------------------------------------------------------------------------
 URL_COLUMNS = ["biodiversity_portal", "gtf_file", "ensembl_browser", "gbif"]
 
 # Total number of annotated genes per accession (used for normalization if present)
