@@ -188,7 +188,15 @@ def _make_fig(
 def init_biotypes(_):
     cols = biotype_pct_columns()
     opts = [{"label": c.removesuffix(PCT_SUFFIX), "value": c} for c in cols]
-    return opts, [o["value"] for o in opts[:4]]  # default up to 4 biotypes
+
+    default_bases = ["protein_coding", "lncRNA"]
+    default_values = [
+        f"{base}{PCT_SUFFIX}"
+        for base in default_bases
+        if f"{base}{PCT_SUFFIX}" in cols
+    ]
+
+    return opts, default_values
 
 
 @callback(
