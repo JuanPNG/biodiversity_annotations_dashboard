@@ -44,6 +44,7 @@ def update_filter_badges(gf):
     Output("nav-data", "className"),
     Output("nav-ga", "className"),
     Output("nav-be", "className"),
+    Output("nav-gm", "className"),
     Input("url", "pathname"),
     prevent_initial_call=False,
 )
@@ -66,4 +67,5 @@ def nav_active_class(pathname: str):
         cls_for("/data-browser"),
         cls_for("/genome-annotations"),
         cls_for("/biotype-environment"),
+        cls_for("/genome-metrics-environment"),
     )
