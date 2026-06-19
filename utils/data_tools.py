@@ -19,6 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyarrow.dataset as ds
+import pyarrow.types as pat
 
 from utils import config
 from utils.parquet_io import (
@@ -526,6 +527,44 @@ def ui_label_for_column(col: str) -> str:
             return col.removeprefix(prefix)
 
     return col
+
+# ---------------------------------------------------------------------------
+# Genome Metrics vs Environment helpers
+# ---------------------------------------------------------------------------
+
+GENOME_METRIC_PREFIXES = (
+    "ena_",
+    "ens_assembly_",
+    "ens_coding_",
+    "ens_non_coding_",
+    "ens_pseudogene_",
+)
+
+
+@lru_cache(maxsize=1)
+def genome_metric_columns() -> list[str]:
+    """Return numeric ENA/Ensembl metric columns available in dashboard_main."""
+    dset = _io_dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
+    if not dset:
+        return []
+
+    cols: list[str] = []
+    for field in dset.schema:
+        name = field.name
+        if not name.startswith(GENOME_METRIC_PREFIXES):
+            continue
+        if pat.is_integer(field.type) or pat.is_floating(field.type):
+            cols.append(name)
+
+    return cols
+
+
+def genome_metric_options() -> list[dict[str, str]]:
+    """Return dropdown options for ENA/Ensembl genome metrics."""
+    return [
+        {"label": ui_label_for_column(col), "value": col}
+        for col in genome_metric_columns()
+    ]
 
 
 # ---------------------------------------------------------------------------
