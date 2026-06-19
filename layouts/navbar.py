@@ -76,6 +76,7 @@ def get_navbar() -> html.Header:
         dcc.Link("Data Browser", href="/data-browser", id="nav-data", className="nav-link"),
         dcc.Link("Biotypes by Taxa", href="/genome-annotations", id="nav-ga", className="nav-link"),
         dcc.Link("Biotypes vs Environment", href="/biotype-environment", id="nav-be", className="nav-link"),
+        dcc.Link("Genome Metrics vs Environment", href="/genome-metrics-environment", id="nav-gm", className="nav-link"),
     ]
 
     # Header and links

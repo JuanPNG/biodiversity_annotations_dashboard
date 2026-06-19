@@ -106,6 +106,15 @@ nav_cards = html.Div(
             href="/biotype-environment",
             className="nav-card-link",
         ),
+        dcc.Link(
+            html.Div(
+                [html.Div("Genome Metrics vs Environment", className="card-title"),
+                 html.Div("Explore ENA genome metrics and Ensembl summaries in relation to species environment and distribution.", className="card-sub")],
+                className="nav-card"
+            ),
+            href="/genome-metrics-environment",
+            className="nav-card-link",
+        ),
     ],
     className="nav-cards-grid",
 )
