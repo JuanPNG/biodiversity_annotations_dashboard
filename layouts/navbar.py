@@ -1,21 +1,30 @@
-# Navigation bar (global filters)
-# -----------------------------------------------------------------------------
-# Declares all cross-page filter controls. Values are *read-only* here; the
-# single writer to dcc.Store(id="global-filters") lives in
-# callbacks/global_filters.py (sync_global_store), which:
-#   - prunes taxonomy cascade selections,
-#   - omits full-span sliders (treated as 'no filter'),
-#   - packs only non-empty keys per the GlobalFilters contract.
-#
-# Numeric slider extents are read once at import from parquet (cached in
-# utils.parquet_io) to avoid repeated I/O during interactions.
-# -----------------------------------------------------------------------------
+"""
+Global navigation and filter control layout.
+
+This module declares the UI components that appear above every page:
+- navigation links,
+- taxonomy filters,
+- biogeography filters,
+- climate filters,
+- gene biotype percentage filters,
+- reset controls,
+- summary badges.
+
+Important boundary:
+This file does not own filter state and should not query page data directly.
+It only defines Dash components and their IDs.
+
+The single writer of dcc.Store(id="global-filters") is callbacks/global_filters.py.
+Page callbacks read that store and pass its values into utils/parquet_io.py.
+"""
 
 from dash import html, dcc
 from utils import parquet_io
 from utils.data_tools import gf_build_quartile_int_marks, ui_label_for_column
 
 # Read all extents we need in a single call (cached in parquet_io)
+# Numeric filter sliders are initialized from real dataset extents.
+# This keeps slider ranges data-driven and avoids hard-coded production assumptions.
 _ENV_COLS = ["clim_bio1_mean", "clim_bio12_mean", "range_km2"]
 try:
     _ENV_EXT = parquet_io.get_column_min_max(_ENV_COLS)
@@ -23,6 +32,8 @@ except Exception:
     _ENV_EXT = {c: (None, None) for c in _ENV_COLS}
 
 
+# Shared builder for numeric range filters.
+# The callback layer treats the full slider span as "no active filter".
 def _slider_from_col(
         label: str | None,
         slider_id: str,
@@ -71,6 +82,8 @@ def _slider_from_col(
 def get_navbar() -> html.Header:
 
     # pages links
+    # These links define the visible pages. If a new page is added, it usually
+    # needs a link here and an active-link rule in callbacks/ui_badges.py.
     links = [
         dcc.Link("Home", href="/", id="nav-home", className="nav-link"),
         dcc.Link("Data Browser", href="/data-browser", id="nav-data", className="nav-link"),
@@ -93,10 +106,11 @@ def get_navbar() -> html.Header:
 
     # --- Navigation bar components ---
     # --- TAXONOMY ---
+    # Taxonomy filters cascade from broad to specific ranks.
     # Cascading dropdowns (kingdom → phylum → ... → species → tax_id).
-    # Each dropdown’s options depend on upstream selections.
-    # Global store key: "taxonomy_map"
     # Full cascade handled in callbacks/global_filters.sync_global_store().
+    # The dropdown options and pruning logic are handled in callbacks/global_filters.py.
+    # The resulting selections are stored under global-filters["taxonomy_map"].
     # Reset button: btn-reset-taxonomy
     # Badge: tax-summary-badge (number of active taxonomy filters)
     taxonomy_group = html.Details(
@@ -179,6 +193,9 @@ def get_navbar() -> html.Header:
     )
 
     # --- BIOGEOGRAPHY ---
+    # Biogeography filters are categorical level/value filters plus a numeric
+    # distribution range. The callback layer resolves selected biogeography values
+    # into accession filters before querying dashboard_main.parquet.
     # Dropdowns for level/value (realm, biome, ecoregion) and a numeric range slider.
     # Global store keys: "bio_levels", "bio_values", "biogeo_ranges"
     # Reset button: btn-reset-biogeo
@@ -239,12 +256,14 @@ def get_navbar() -> html.Header:
     )
 
     # --- CLIMATE ---
+    # Climate filters currently expose numeric ranges.
+    # The hidden categorical dropdown is reserved for future climate classification labels.
     # Two sliders for climate numeric variables (mean annual temperature and
     # annual precipitation). Full-span == “no filter” → omitted from store.
     # Global store key: "climate_ranges"
     # Reset handled by btn-reset-climate (shared).
     # (ALSO) Dropdown for selecting climate categories (e.g., Köppen labels). TODO:  Add Koppen categorical climate
-    # Global store key: "climate"
+    # Global store key for Köppen: "climate"
     # Currently placeholder if categorical labels not yet implemented.
     # Reset button: btn-reset-climate
     # Badge: climate-summary-badge
@@ -293,6 +312,8 @@ def get_navbar() -> html.Header:
     )
 
     # --- BIOTYPE % ---
+    # Gene biotype percentage filtering targets one selected biotype and a percent range.
+    # The store omits this filter when the slider remains at the full 0-100 span.
     # Dropdown for selecting a biotype (e.g., protein_coding) and a percentage range slider.
     # Global store key: "biotype_pct" → {"biotype": str, "min": float, "max": float}
     # Full-span == “no filter” → omitted from store.
@@ -367,6 +388,9 @@ def get_navbar() -> html.Header:
     )
 
     # --- SUPER-GROUP: Data filters  ---
+    # This top-level group visually collects all global filters.
+    # It is still only UI: callbacks/global_filters.py turns these component values
+    # into the shared global-filters store.
     # Groups all filter sections and badges. Controls global-filters store content.
     # Reset All button clears all sub-groups.
     data_filters_group = html.Details(
