@@ -3,6 +3,10 @@
    Loaded after styles.css
 =================================== */
 
+/* This file is an override layer for the EMBL-EBI light theme.
+   Keep assets/styles.css as the rollback baseline, and scope new rules to
+   .app-root[data-theme="embl-light"] unless they intentionally support dark
+   theme compatibility at the end of this file. */
 .app-root[data-theme="embl-light"] {
   --bg: #ffffff;
   --surface-1: #ffffff;
@@ -200,6 +204,8 @@
    EMBL-EBI Page Surfaces
 =================================== */
 
+/* Page containers are deliberately unframed; section dividers and the shared
+   footer border provide the page rhythm instead of card-like wrappers. */
 .app-root[data-theme="embl-light"] .page-container {
   background: #ffffff;
   border: 0;
@@ -223,6 +229,8 @@
   padding-bottom: 12px;
 }
 
+/* The shared footer owns the final divider before Contact & Feedback, so the
+   last home section suppresses its own divider to avoid double lines. */
 .app-root[data-theme="embl-light"] .page-container > .home-section:last-child {
   border-bottom: 0;
   margin-bottom: 0;
@@ -634,6 +642,8 @@
    EMBL-EBI Footer
 =================================== */
 
+/* The footer is shared by every page. Its top border is the canonical divider
+   before Contact & Feedback; do not recreate this divider in individual pages. */
 .app-root[data-theme="embl-light"] .site-footer {
   background: #ffffff;
   border: 0;
@@ -721,9 +731,13 @@
 }
 
 /* ================================
-   Biotype vs Environment plot controls
+   Biotype/Genome Metrics vs Environment plot controls
 =================================== */
 
+/* Shared layout for the Biotypes vs Environment and Genome Metrics vs
+   Environment pages. Both pages use the same plot-control rows and two-column
+   plot grid; page-specific differences should be handled with modifier classes
+   such as .genome-metrics-control-row--primary. */
 .app-root[data-theme="embl-light"] .biotype-env-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
@@ -742,65 +756,76 @@
   }
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-plot-controls {
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls {
   display: grid;
   gap: 14px;
   margin: 0;
   padding: 10px 14px 14px;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row {
+.app-root[data-theme="embl-light"] .biotype-env-control-row {
   align-items: start;
   display: grid;
   gap: 12px 18px;
   min-width: 0;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--primary {
+.app-root[data-theme="embl-light"] .biotype-env-control-row--primary {
   grid-template-columns: minmax(320px, 1fr) max-content max-content;
   justify-content: start;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--x {
+/* Genome Metrics has one primary Y selector plus Log Y, while Biotypes has the
+   biotype selector, Y metric radio group, and Log Y. */
+.app-root[data-theme="embl-light"] .genome-metrics-control-row--primary {
+  grid-template-columns: minmax(320px, 1fr) max-content;
+  justify-content: start;
+}
+
+.app-root[data-theme="embl-light"] .biotype-env-control-row--x {
   grid-template-columns: minmax(260px, 1fr) max-content minmax(260px, 1fr) max-content;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--x .biotype-env-log-inline {
+/* Align compact Log X checkboxes with the neighbouring dropdown controls. */
+.app-root[data-theme="embl-light"] .biotype-env-control-row--x .biotype-env-log-inline {
   margin-top: 27px;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--display {
+.app-root[data-theme="embl-light"] .biotype-env-control-row--display {
   grid-template-columns: max-content max-content 160px;
   justify-content: start;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .db-control {
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls .db-control {
   align-self: start;
   min-width: 0;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .control-label {
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls .control-label {
   display: block;
   line-height: 1.2;
   margin-bottom: 4px;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls #bs-y-metric,
-.app-root[data-theme="embl-light"] #bs-plot-controls #bs-reg,
-.app-root[data-theme="embl-light"] #bs-plot-controls #bs-size,
-.app-root[data-theme="embl-light"] #bs-plot-controls #bs-logy {
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls #bs-y-metric,
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls #bs-reg,
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls #bs-size,
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls #bs-logy,
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls #gm-reg,
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls #gm-size {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 6px 18px;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls #bs-y-metric {
+/* Keep the Biotypes Y metric choices on one line on desktop. */
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls #bs-y-metric {
   flex-wrap: nowrap;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls .radio-input,
-.app-root[data-theme="embl-light"] #bs-plot-controls .checkbox-input {
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls .radio-input,
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls .checkbox-input {
   accent-color: var(--accent);
   background: initial;
   border: initial;
@@ -814,13 +839,14 @@
   width: 16px;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls label.radio-label,
-.app-root[data-theme="embl-light"] #bs-plot-controls label.checkbox-label {
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls label.radio-label,
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls label.checkbox-label {
   font-size: 0.85rem !important;
   font-weight: 400 !important;
 }
 
-.app-root[data-theme="embl-light"] #bs-plot-controls #bs-cap {
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls #bs-cap,
+.app-root[data-theme="embl-light"] .biotype-env-plot-controls #gm-cap {
   box-sizing: border-box;
   height: 32px;
   min-height: 32px;
@@ -830,17 +856,19 @@
 }
 
 @media (max-width: 900px) {
-  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--primary,
-  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--x,
-  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--display {
+  .app-root[data-theme="embl-light"] .biotype-env-control-row--primary,
+  .app-root[data-theme="embl-light"] .genome-metrics-control-row--primary,
+  .app-root[data-theme="embl-light"] .biotype-env-control-row--x,
+  .app-root[data-theme="embl-light"] .biotype-env-control-row--display {
     grid-template-columns: repeat(2, minmax(140px, 1fr));
   }
 }
 
 @media (max-width: 560px) {
-  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--primary,
-  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--x,
-  .app-root[data-theme="embl-light"] #bs-plot-controls .biotype-env-control-row--display {
+  .app-root[data-theme="embl-light"] .biotype-env-control-row--primary,
+  .app-root[data-theme="embl-light"] .genome-metrics-control-row--primary,
+  .app-root[data-theme="embl-light"] .biotype-env-control-row--x,
+  .app-root[data-theme="embl-light"] .biotype-env-control-row--display {
     grid-template-columns: 1fr;
   }
 }
