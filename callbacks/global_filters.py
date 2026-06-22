@@ -1,7 +1,22 @@
-# callbacks/global_filters.py
-# -----------------------------------------------------------------------------
-# Global Filters (single source of truth for cross-page state)
-#
+"""
+Global filter callback registry.
+
+This module gives meaning to the filter controls declared in layouts/navbar.py.
+
+Responsibilities:
+- populate taxonomy, biogeography, and biotype dropdown options,
+- cascade/prune dependent dropdown selections,
+- convert all navbar control values into dcc.Store(id="global-filters"),
+- reset filter groups back to their neutral values.
+
+Architectural contract:
+callbacks in this module are the only writers to global-filters.
+All page callbacks should treat global-filters as read-only input.
+
+The store contains only active filters. Empty selections and full-span sliders
+are omitted so downstream code can interpret missing keys as "no filter".
+"""
+
 # Store contract (keys present only when non-empty/narrowed):
 # {
 #   "taxonomy_map": {rank: [values], ...},     # ranks = config.TAXONOMY_RANK_COLUMNS + 'tax_id'
@@ -56,6 +71,9 @@ from utils.types import (
 # A) Biogeography options
 # ──────────────────────────────────────────────────────────────────────────────
 
+
+# Populate static biogeography level options when the app/page loads.
+# Values are read from biogeo_long.parquet via utils.data_tools.
 @callback(
     Output("filter-bio-level", "options"),
     Input("url", "pathname"),
@@ -65,6 +83,9 @@ def init_biogeo_levels(_):
     # Populate levels once on load/navigation
     return list_biogeo_levels()
 
+
+# When selected biogeography levels change, only keep region values that are
+# valid under those levels. This prevents stale selections from reaching the store.
 @callback(
     Output("filter-bio-value", "options"),
     Output("filter-bio-value", "value"),
@@ -89,6 +110,10 @@ def cascade_biogeo_values(levels, cur_values):
 # Note:
 # - The cascade emits cleaned lists (no empty strings/None).
 # - Does *not* write to the global store — it only shapes the dependent dropdown options/values.
+
+# Taxonomy cascade:
+# each rank's options are constrained by selections in broader ranks.
+# The callback also prunes currently selected values that are no longer valid.
 
 @callback(
     # Options (single cascade callback also handles first load)
@@ -160,6 +185,8 @@ def cascade_taxonomy(k, p, c, o, f, g, s, taxid):
 # ──────────────────────────────────────────────────────────────────────────────
 # C) Biotype % dropdown (values are base names, label=base)
 # ──────────────────────────────────────────────────────────────────────────────
+# The biotype percentage dropdown is populated from detected *_percentage columns.
+# Option values use the base biotype name, without the configured suffix.
 
 @callback(
     Output("bio-pct-biotype", "options"),
@@ -188,6 +215,10 @@ def init_biotype_pct_options(_):
 # - See tests/test_global_filters_helpers.py for expected packing behavior
 #
 # Pages/callbacks listening to this store *must* tolerate missing keys.
+
+# Single writer for dcc.Store(id="global-filters").
+# This callback compacts all filter controls into the shared store contract.
+# Downstream page callbacks depend on these key names and omission rules.
 
 @callback(
     Output("global-filters", "data", allow_duplicate=True),
@@ -274,6 +305,7 @@ def sync_global_store(
         ranks.append("tax_id")
 
     # Taxonomy map (drop empty lists)
+    # Match visible dropdown IDs to canonical taxonomy rank keys.
     values_by_rank = {
         "kingdom": tax_kingdom,
         "phylum": tax_phylum,
@@ -318,6 +350,8 @@ def sync_global_store(
 # ──────────────────────────────────────────────────────────────────────────────
 # E) Reset buttons — set UI back to neutral; store is recomputed by D)
 # ──────────────────────────────────────────────────────────────────────────────
+# Reset callbacks only reset UI component values.
+# The global store is then recomputed by sync_global_store from those neutral values.
 
 @callback(
     Output("filter-tax-kingdom", "value", allow_duplicate=True),
@@ -380,8 +414,8 @@ def reset_biotype_pct(n):
     return None, [0, 100]
 
 # RESET ALL
-# Clears taxonomy/climate labels/biogeo/biotype% selections and restores slider values
-# to their *current extents* (from navbar bootstrap). Returns a full tuple of component values.
+# Reset all controls in one callback so the UI returns to a coherent neutral state.
+# Slider resets use their current min/max values, which were initialized from data extents.
 # Important: the callback must return a value for *every* controlled prop in the navbar.
 @callback(
     # taxonomy
