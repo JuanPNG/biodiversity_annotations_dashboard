@@ -501,13 +501,33 @@ def db_make_column_defs(df: pd.DataFrame) -> list[dict]:
 
 # --- UI label helpers --------------------------------------------------------
 
+def _pretty_metric_name(name: str) -> str:
+    """Convert metric column suffixes into compact UI labels."""
+    replacements = {
+        "coding_genes": "genes",
+        "non_coding_genes": "genes",
+        "pseudogenes": "pseudogenes",
+        "gc_percentage": "GC %",
+        "contig_n50": "contig N50",
+        "scaffold_n50": "scaffold N50",
+        "contig_n75": "contig N75",
+        "contig_n90": "contig N90",
+        "scaffold_n75": "scaffold N75",
+        "scaffold_n90": "scaffold N90",
+        "contig_l50": "contig L50",
+        "scaffold_l50": "scaffold L50",
+    }
+    if name in replacements:
+        return replacements[name]
+
+    return name.replace("_", " ")
+
 def ui_label_for_column(col: str) -> str:
     """
     Return a human-readable label for dashboard columns.
 
     Explicit labels in config.COLUMN_LABELS win first. ENA and Ensembl stats
-    then drop the source/group prefix for compact Data Browser display while
-    keeping the underlying Parquet field name unchanged.
+    keep source/group context so similarly named metrics remain distinguishable.
     """
     from utils import config
 
@@ -515,16 +535,17 @@ def ui_label_for_column(col: str) -> str:
     if col in labels:
         return labels[col]
 
-    compact_prefixes = (
-        "ena_",
-        "ens_assembly_",
-        "ens_coding_",
-        "ens_non_coding_",
-        "ens_pseudogene_",
+    metric_prefix_labels = (
+        ("ena_", "ENA"),
+        ("ens_assembly_", "Assembly"),
+        ("ens_coding_", "Coding"),
+        ("ens_non_coding_", "Non-coding"),
+        ("ens_pseudogene_", "Pseudogene"),
     )
-    for prefix in compact_prefixes:
+    for prefix, group_label in metric_prefix_labels:
         if col.startswith(prefix):
-            return col.removeprefix(prefix)
+            metric_name = _pretty_metric_name(col.removeprefix(prefix))
+            return f"{group_label}: {metric_name}"
 
     return col
 
