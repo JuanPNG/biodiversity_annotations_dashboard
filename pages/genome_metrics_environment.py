@@ -61,7 +61,7 @@ def layout():
                                 className="db-control biotype-env-log-inline",
                             ),
                         ],
-                        className="biotype-env-control-row biotype-env-control-row--primary",
+                        className="biotype-env-control-row genome-metrics-control-row--primary",
                     ),
                     html.Div(
                         [
