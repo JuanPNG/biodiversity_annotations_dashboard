@@ -1,8 +1,15 @@
-"""Build the dashboard's accession-level Parquet table.
+"""
+Build dashboard_main.parquet from the integrated source Parquet.
 
-This module flattens selected nested fields from the source integrated Parquet
-into one row per accession. Repeated or categorical data that is not naturally
-one-to-one with accession should stay in separate ETL outputs.
+The main table is one row per genome accession and contains the columns used by
+most dashboard pages:
+- taxonomy ranks,
+- gene biotype counts and percentages,
+- climate summaries,
+- distribution summaries,
+- external metadata URLs.
+
+Keep this output schema aligned with utils/config.py.
 """
 from __future__ import annotations
 
@@ -14,6 +21,8 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 
 
+# Biotypes to project into explicit *_count and *_percentage columns.
+# The dashboard discovers these columns by suffix at runtime.
 GENE_BIOTYPE_KEYS: Sequence[str] = (
     # 10 most relevant
     "protein_coding","lncRNA","rRNA","tRNA","miRNA",
@@ -27,6 +36,8 @@ GENE_BIOTYPE_KEYS: Sequence[str] = (
     "transcribed_processed_pseudogene", "transcribed_unprocessed_pseudogene",
     "unitary_pseudogene", "unprocessed_pseudogene", "vault_RNA"
 )
+
+# Climate variables and summary statistics to flatten into clim_<var>_<stat> columns.
 CLIMATE_VARS: Sequence[str] = ("bio1","bio7","bio12","bio15")
 CLIMATE_STATS: Sequence[str] = ("mean","max","min")
 
@@ -177,6 +188,7 @@ def _first_struct(data: Any) -> Dict[str, Any] | None:
     return None
 
 
+# Flatten nested source fields into the wide dashboard_main.parquet schema.
 def build_main_table(parquet_path: str) -> pd.DataFrame:
     """Build the wide accession-level table consumed by the dashboard.
 
@@ -184,6 +196,7 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
     distribution, source URLs, gene biotype summaries, and selected ENA/Ensembl
     assembly and annotation statistics.
     """
+    # Read only source columns needed to construct the main dashboard table.
     wanted = [
         "accession", "taxonomy", "gene_biotypes", "clim_CHELSA", "meta_urls",
         "range_km2", "mean_elevation", "min_elevation", "max_elevation", "median_elevation",
@@ -226,6 +239,7 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
         out.update(_flatten_ensembl_stats(ens_col[i]))
 
         # Taxonomy
+        # Flatten the first taxonomy record into rank columns.
         tax = _first_struct(tax_col[i])
         if tax is not None:
             for k in ("kingdom", "phylum", "class", "order", "family", "genus", "species"):
@@ -233,6 +247,7 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
             out["tax_id"] = tax.get("tax_id")
 
         # Climate
+        # Flatten nested climate summaries into one numeric column per variable/statistic.
         clim = clim_col[i]
         if isinstance(clim, dict):
             for var in CLIMATE_VARS:
@@ -242,6 +257,7 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
                         out[f"clim_{var}_{stat}"] = vb.get(stat)
 
         # URLs
+        # Flatten external metadata URLs used by the Data Browser.
         mu = _first_struct(urls_col[i])
         if mu is not None:
             out["biodiversity_portal"] = mu.get("Biodiversity_portal")
@@ -250,6 +266,8 @@ def build_main_table(parquet_path: str) -> pd.DataFrame:
             out["gbif"] = mu.get("GBIF")
 
         # Gene biotypes
+        # Materialise every configured biotype as explicit count and percentage columns,
+        # even when a given accession has missing values.
         for k in GENE_BIOTYPE_KEYS:
             out[f"{k}_count"] = pd.NA
             out[f"{k}_percentage"] = math.nan

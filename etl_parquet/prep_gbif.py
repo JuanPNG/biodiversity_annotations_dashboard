@@ -1,8 +1,9 @@
-"""Build the dashboard's GBIF occurrence Parquet table.
+"""
+Build gbif_occurrences.parquet from the integrated source Parquet.
 
-The source integrated Parquet stores GBIF occurrences as a nested list per
-accession. This module explodes that list into one row per occurrence while
-preserving occurrence-level fields used by maps and downstream summaries.
+The output is one row per GBIF occurrence, linked back to genome accession.
+This file is prepared for future map/spatial pages; current dashboard pages
+primarily use dashboard_main.parquet and biogeo_long.parquet.
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ def _safe_col(table: pa.Table, name: str) -> List[Any]:
     return table[name].to_pylist() if name in table.column_names else [None] * len(table)
 
 
+# Explode nested GBIF occurrence records into a flat table suitable for maps.
 def build_gbif_occurrences(parquet_path: str) -> pd.DataFrame:
     """Explode GBIF occurrence records into one row per occurrence.
 

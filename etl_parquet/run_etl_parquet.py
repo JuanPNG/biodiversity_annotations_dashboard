@@ -1,8 +1,13 @@
-"""Command-line entrypoint for building dashboard-ready Parquet files.
+"""
+ETL entry point for building dashboard-ready Parquet files.
 
-This script reads one integrated source Parquet and writes the processed files
-consumed by the Dash app. By default it writes to data/processed, so use
---out-dir for review/versioned runs when working with production data.
+This script reads the integrated source Parquet and writes the processed files
+consumed by the Dash app:
+- dashboard_main.parquet,
+- biogeo_long.parquet,
+- gbif_occurrences.parquet.
+
+The Dash runtime expects these outputs under data/processed/ by default.
 """
 
 from __future__ import annotations
@@ -14,7 +19,7 @@ from .prep_main_parquet import build_main_table
 from .prep_biogeo import build_biogeo_long
 from .prep_gbif import build_gbif_occurrences
 
-
+# Command-line entry point used to rebuild all processed dashboard datasets.
 def run() -> None:
     """Parse CLI arguments, build all processed tables, and write them to disk."""
     ap = argparse.ArgumentParser(description=(
@@ -34,6 +39,9 @@ def run() -> None:
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
     # Build in memory before writing any outputs.
+    # Build each dashboard table from the same source Parquet.
+    # Each builder owns one output shape.
+
     main_df = build_main_table(str(args.parquet_path))
     bio_df  = build_biogeo_long(str(args.parquet_path))
     gbif_df = build_gbif_occurrences(str(args.parquet_path))
@@ -43,6 +51,7 @@ def run() -> None:
     p_bio  = args.out_dir / "biogeo_long.parquet"
     p_gbif = args.out_dir / "gbif_occurrences.parquet"
 
+    # Write stable filenames expected by utils/config.py.
     main_df.to_parquet(p_main, index=False)
     bio_df.to_parquet(p_bio, index=False)
     gbif_df.to_parquet(p_gbif, index=False)

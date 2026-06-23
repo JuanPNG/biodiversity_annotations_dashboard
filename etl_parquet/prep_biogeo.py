@@ -1,8 +1,13 @@
-"""Build the dashboard's long-format biogeography Parquet table.
+"""
+Build biogeo_long.parquet from the integrated source Parquet.
 
-The source integrated Parquet stores realm, biome, and ecoregion values in a
-nested accession-level structure. This module flattens those independent lists
-into one row per accession/level/value combination for filtering and summaries.
+The output is a long table:
+    accession | level | value
+
+where level is one of realm, biome, or ecoregion.
+
+The Dash app uses this table to convert selected biogeography regions into
+accession allow-lists that can filter dashboard_main.parquet.
 """
 
 from __future__ import annotations
@@ -21,6 +26,7 @@ def _safe_col(table: pa.Table, name: str) -> List[Any]:
     return table[name].to_pylist() if name in table.column_names else [None] * len(table)
 
 
+# Source biogeography values can be nested lists; flatten them into plain strings.
 def _flat_str_list(v: Any) -> List[str]:
     """Flatten source biogeography values from list<array<string>> to list[str]."""
     out: List[str] = []
@@ -33,6 +39,7 @@ def _flat_str_list(v: Any) -> List[str]:
     return out
 
 
+# Convert nested biogeography blocks into a tidy accession/level/value table.
 def build_biogeo_long(parquet_path: str) -> pd.DataFrame:
     """Create a tidy biogeography table with one level per row.
 
