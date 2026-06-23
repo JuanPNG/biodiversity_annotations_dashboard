@@ -268,13 +268,30 @@ This keeps page files mostly declarative and keeps callback files focused on sta
 
 ```mermaid
 flowchart LR
-    A["pages/example.py<br/>layout and component IDs"] --> B["callbacks/example_callbacks.py<br/>Dash callback wiring"]
-    C["dcc.Store(id='global-filters')"] --> B
-    B --> D["utils/parquet_io.py<br/>filtered reads and aggregations"]
-    B --> E["utils/data_tools.py<br/>pure transformations"]
-    D --> B
-    E --> B
-    B --> F["Dash component output<br/>table, figure, status text"]
+    subgraph Layout["Page layout"]
+        P["pages/example.py<br/>declares route, layout, component IDs"]
+    end
+
+    subgraph SharedState["Shared state"]
+        G["dcc.Store(id='global-filters')<br/>written by callbacks/global_filters.py"]
+    end
+
+    subgraph Callback["Page callback"]
+        C["callbacks/example_callbacks.py<br/>reads inputs, calls helpers, returns outputs"]
+    end
+
+    subgraph Helpers["Shared helpers"]
+        IO["utils/parquet_io.py<br/>filtered reads and aggregations"]
+        DT["utils/data_tools.py<br/>pure transformations"]
+    end
+
+    P -. "component IDs targeted by callbacks" .-> C
+    G --> C
+    C --> IO
+    C --> DT
+    IO --> C
+    DT --> C
+    C --> O["Dash outputs<br/>figure, table, status text"]
 ```
 
 ### Page Files
