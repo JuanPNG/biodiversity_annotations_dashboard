@@ -1,8 +1,15 @@
-"""Central dashboard configuration.
+"""
+Central dashboard configuration.
 
-This file defines dataset paths, canonical column names, UI labels, Data Browser
-column presets, and gene biotype discovery rules. Keep values here declarative:
-runtime logic should live in utils/parquet_io.py, utils/data_tools.py, or callbacks.
+This module describes the processed data schema used by the Dash app:
+- where processed Parquet files live,
+- which columns represent accessions, taxonomy, climate, biogeography, URLs,
+- which columns are grouped into Data Browser presets,
+- how gene biotype count/percentage columns are named.
+
+Most modules import these constants instead of hard-coding column names.
+If the ETL output schema changes, update this file first and then check the
+affected readers in utils/parquet_io.py and page callbacks.
 """
 
 from __future__ import annotations
@@ -13,11 +20,10 @@ from pathlib import Path
 # ---------------------------------------------------------------------------
 # Data locations
 # ---------------------------------------------------------------------------
-# The app reads processed Parquet files from this directory. Set
-# DASHBOARD_DATA_DIR to test a generated review folder without changing code.
+# Runtime data location. The app expects ETL outputs to be written here.
 DATA_DIR = Path(os.getenv("DASHBOARD_DATA_DIR", "data/processed"))
 
-# Filenames (without hard-coding paths elsewhere)
+# Processed Parquet files produced by etl_parquet/run_etl_parquet.py.
 DASHBOARD_MAIN_FN = "dashboard_main.parquet"
 BIOGEO_LONG_FN = "biogeo_long.parquet"
 GBIF_OCCURRENCES_FN = "gbif_occurrences.parquet"  # not used yet in filters
@@ -26,8 +32,8 @@ GBIF_OCCURRENCES_FN = "gbif_occurrences.parquet"  # not used yet in filters
 # Processed table column contract
 # ---------------------------------------------------------------------------
 
-# dashboard_main.parquet accession key and taxonomy columns used by global
-# filters, Data Browser, Home KPIs, and Biotype by Taxa.
+# Column names in dashboard_main.parquet.
+# Keep these aligned with etl_parquet/prep_main_parquet.py.
 ACCESSION_COL_MAIN = "accession"         # in dashboard_main
 TAXONOMY_COL = None
 TAXONOMY_RANK_COLUMNS = [
@@ -68,6 +74,8 @@ COLUMN_LABELS: dict[str, str] = {
 
 
 # biogeo_long.parquet columns used by global biogeography filters and KPIs.
+# Column names in dashboard_main.parquet.
+# Keep these aligned with etl_parquet/prep_main_parquet.py.
 ACCESSION_COL_BIOGEO = "accession"       # in biogeo_long
 BIOGEO_LEVEL_COL = "level"
 BIOGEO_VALUE_COL = "value"
@@ -77,8 +85,9 @@ BIOGEO_LEVELS_TO_EXPOSE = ["realm", "biome", "ecoregion"]
 # Data Browser column presets
 # ---------------------------------------------------------------------------
 
-# Used by callbacks/data_browser_callbacks.py. Values can be exact column names
-# or prefix wildcards ending in "*", resolved by utils.data_tools.resolve_preset_columns.
+# Data Browser column presets.
+# These are UI conveniences only; the actual available columns come from Parquet schema discovery.
+# Used by callbacks/data_browser_callbacks.py.
 PRESET_COLUMN_GROUPS = {
     "ensembl_biotypes": [
         "accession", "species", "total_gene_biotypes",
@@ -133,6 +142,10 @@ DEFAULT_COLUMN_PRESET = "ensembl_biotypes"
 # Gene biotype detection
 # ---------------------------------------------------------------------------
 
+# Gene biotype columns are discovered by suffix.
+# For a base biotype like "lncRNA", the app expects:
+#   lncRNA_count
+#   lncRNA_percentage
 # Used by utils.parquet_io.list_biotype_columns() to decide which *_count and
 # *_percentage columns are true gene biotypes. This prevents ENA/Ensembl metrics
 # such as ena_contig_count or ens_assembly_gc_percentage from appearing as
@@ -178,8 +191,10 @@ GENE_BIOTYPE_EXCLUDE = {"total_gene_biotypes"}
 # ---------------------------------------------------------------------------
 # Data Browser rendering and biotype normalization
 # ---------------------------------------------------------------------------
+# Data Browser renders these columns as clickable Markdown links.
 URL_COLUMNS = ["biodiversity_portal", "gtf_file", "ensembl_browser", "gbif"]
 
 # Total number of annotated genes per accession (used for normalization if present)
+# Used as the denominator for biotype percentage and per-1k calculations when available.
 TOTAL_GENES_COL = "total_gene_biotypes"
 
