@@ -45,6 +45,7 @@ flowchart TD
     J --> L["pages/data_browser.py"]
     J --> M["pages/genome_annotations.py"]
     J --> N["pages/biotype_environment.py"]
+    J --> O["pages/genome_metrics_environment.py"]
 ```
 
 ## Documentation
@@ -121,7 +122,8 @@ data/processed/gbif_occurrences.parquet
 │   ├── home.py
 │   ├── data_browser.py
 │   ├── genome_annotations.py
-│   └── biotype_environment.py
+│   ├── biotype_environment.py
+│   └── genome_metrics_environment.py
 │
 ├── callbacks/
 │   ├── global_filters.py
@@ -129,7 +131,8 @@ data/processed/gbif_occurrences.parquet
 │   ├── home_kpis.py
 │   ├── data_browser_callbacks.py
 │   ├── genome_annotations_callbacks.py
-│   └── biotype_environment_callbacks.py
+│   ├── biotype_environment_callbacks.py
+│   └── genome_metrics_environment_callbacks.py
 │
 ├── utils/
 │   ├── config.py
@@ -310,6 +313,7 @@ Examples:
 - `pages/data_browser.py`
 - `pages/genome_annotations.py`
 - `pages/biotype_environment.py`
+- `pages/genome_metrics_environment.py`
 
 ### Callback Files
 
@@ -328,6 +332,7 @@ Examples:
 - `callbacks/data_browser_callbacks.py`
 - `callbacks/genome_annotations_callbacks.py`
 - `callbacks/biotype_environment_callbacks.py`
+- `callbacks/genome_metrics_environment_callbacks.py`
 
 ### Shared Helper Files
 
@@ -379,6 +384,7 @@ Used by:
 - Data Browser
 - Genome Annotations
 - Biotype vs Environment
+- Genome Metrics vs Environment
 - global taxonomy, climate, distribution, and biotype filters
 
 Important column groups:
@@ -392,6 +398,7 @@ Important column groups:
 | Gene total | `total_gene_biotypes` |
 | Climate | `clim_bio1_*`, `clim_bio7_*`, `clim_bio12_*`, `clim_bio15_*` |
 | Distribution | `range_km2`, `mean_elevation`, `min_elevation`, `max_elevation`, `median_elevation` |
+| Genome metrics | ENA genome metrics and Ensembl summary columns exposed by `genome_metric_options()` |
 | External links | `biodiversity_portal`, `gtf_file`, `ensembl_browser`, `gbif` |
 
 ### `biogeo_long.parquet`
@@ -487,6 +494,19 @@ The Biotype vs Environment page explores relationships between gene biotypes and
 - optional visual OLS trendlines
 - optional log axes
 
+### Genome Metrics vs Environment
+
+The Genome Metrics vs Environment page explores relationships between genome-level metrics and environmental variables:
+
+- climate scatterplot
+- distribution scatterplot
+- selectable genome metric for the Y axis
+- optional point sizing by total genes
+- optional visual OLS trendlines
+- optional log axes
+- optional point cap for dense plots
+- global filter support
+
 ## Runtime Data Access
 
 The app reads processed Parquet files through `utils/parquet_io.py`. Page callbacks should prefer these helpers over direct Parquet reads so filtering behavior stays consistent across pages.
@@ -498,6 +518,7 @@ Current data access patterns:
 - Biogeography filters are resolved through `biogeo_long.parquet` into accession allow-lists.
 - Numeric climate and distribution ranges become Arrow range predicates.
 - Gene biotype percentage filters use precomputed `*_percentage` columns when available, with count-based fallback logic where needed.
+- Genome Metrics vs Environment reads selected genome metric columns from `dashboard_main.parquet` and plots them against climate/distribution variables under the active global filters.
 
 Process-local caching is used only for stable, schema-like lookups:
 
