@@ -1,10 +1,22 @@
-# -----------------------------------------------------------------------------
-# Centralized Arrow/Parquet I/O helpers for the dashboard.
-# - Column/domain discovery
-# - Min/max extents for sliders (climate, range_km2)
-# - Biotype column lists (pct/count)
-# Keep functions pure/deterministic; avoid side effects and keep caching tight.
-# -----------------------------------------------------------------------------
+"""
+Parquet data access helpers for the dashboard runtime.
+
+This module is the boundary between Dash callbacks and processed Parquet data.
+It centralizes:
+- schema discovery,
+- Arrow dataset loading,
+- predicate construction,
+- biogeography-to-accession resolution,
+- server-side paging for the Data Browser,
+- filtered row counting,
+- distinct-value discovery for dropdowns,
+- gene biotype summaries and grouped aggregations,
+- numeric min/max discovery for slider initialization.
+
+Dash callbacks should prefer calling helpers here rather than reading Parquet
+directly. This keeps filtering behavior consistent across pages.
+"""
+
 
 from functools import lru_cache
 from pathlib import Path
@@ -20,18 +32,25 @@ import pyarrow.dataset as ds
 # Light simple alias for filter expressions.
 DatasetExpr = Any
 
+# Small dataset factory used by all readers.
+# Failing fast here makes missing processed data obvious during app startup or callback execution.
 def _dataset(path: Path) -> ds.Dataset:
     if not path.exists():
         raise FileNotFoundError(f"Parquet file not found: {path}")
     return ds.dataset(str(path))
 
+
 def list_columns(path: Path) -> list[str]:
     dset = _dataset(path)
     return list(dset.schema.names)
 
+
 def pick_default_columns(all_cols: Sequence[str], max_cols: int = 25) -> list[str]:
     return list(all_cols[:max_cols])
 
+
+# Convert selected biogeography levels/values into an accession allow-list.
+# Downstream filters apply that accession list to dashboard_main.parquet.
 def _get_accessions_for_biogeo(levels: Sequence[str] | None, values: Sequence[str] | None) -> set[str]:
     if not levels and not values:
         return set()
@@ -45,6 +64,7 @@ def _get_accessions_for_biogeo(levels: Sequence[str] | None, values: Sequence[st
     table = bset.to_table(columns=[config.ACCESSION_COL_BIOGEO], filter=expr)
     s = pd.Series(table.column(0).to_pandas()).dropna().astype(str)
     return set(s.unique())
+
 
 def get_biogeo_tags_for_accessions_by_level(accessions: Sequence[str], levels: Sequence[str]) -> dict[str, dict[str, list[str]]]:
     if not accessions or not levels:
@@ -67,6 +87,9 @@ def get_biogeo_tags_for_accessions_by_level(accessions: Sequence[str], levels: S
         out[acc] = slot
     return out
 
+
+# Build the shared Arrow predicate for categorical filters.
+# Semantics: OR within a selected rank/list, AND across different filter groups.
 def _build_filter_expr(
     dset: ds.Dataset,
     taxonomy_filter: Sequence[str] | None,
@@ -108,6 +131,9 @@ def _build_filter_expr(
 
     return expr
 
+
+# Fast path for gene biotype percentage filtering.
+# If a precomputed *_percentage column exists, Arrow can apply the filter directly.
 def _build_biotype_pct_pushdown(
         dset: ds.Dataset,
         biotype_pct_filter: dict | None
@@ -128,6 +154,9 @@ def _build_biotype_pct_pushdown(
         return expr, col
     return None, None
 
+
+# Convert numeric slider ranges into Arrow BETWEEN predicates.
+# Missing or malformed ranges are ignored so callbacks can pass partial stores safely.
 def _build_range_expr(
         dset: ds.Dataset,
         ranges: dict | None
@@ -147,6 +176,8 @@ def _build_range_expr(
         expr = e if expr is None else (expr & e)
     return expr
 
+
+# Discover gene biotype columns from the schema instead of maintaining a duplicate list.
 def list_biotype_columns() -> dict[str, list[str]]:
     """
     Return {'pct': [...], 'count': [...]} for gene biotype columns.
@@ -268,6 +299,10 @@ def summarize_biotypes(
     df = pd.DataFrame(rows).dropna(subset=["value"])
     return df.sort_values("value", ascending=False, kind="mergesort").reset_index(drop=True)
 
+
+# Data Browser reader.
+# Applies the global filter contract, reads only requested columns plus helper columns,
+# and returns one page of rows for AG Grid.
 def load_dashboard_page(
     *,
     columns: list[str],
@@ -402,7 +437,8 @@ def load_dashboard_page(
     return page_df, int(len(page_df))
 
 
-
+# Companion count for Data Browser status/KPIs.
+# Mirrors load_dashboard_page filtering so totals match the visible filter state.
 def count_dashboard_rows(
     *,
     taxonomy_filter: Sequence[str] | None = None,
@@ -548,7 +584,8 @@ def _coerce_values_for_column(dset: ds.Dataset, column: str, vals: Sequence) -> 
     return out
 
 
-# For taxonomy filters cascade
+# Distinct-value discovery for dropdown options and KPI counts.
+# This intentionally uses the same filter contract as page data reads.
 def distinct_values_for_column(
     column: str,
     *,
@@ -674,7 +711,8 @@ def distinct_values_for_column(
     return sorted(list(uniques))[:limit]
 
 
-
+# Genome Annotations aggregation.
+# Groups rows by a taxonomy rank and computes each biotype's share within that group.
 def summarize_biotypes_by_rank(
     *,
     group_rank: str,
@@ -1021,6 +1059,8 @@ def _get_column_min_max_cached(cols_key: tuple[str, ...]) -> dict[str, tuple[flo
     return result
 
 
+# Public slider extent helper.
+# Navbar uses this at import time so numeric filters reflect the actual dataset range.
 def get_column_min_max(columns: list[str]) -> dict[str, tuple[float | None, float | None]]:
     """
     Public helper: return {col: (min, max)} for the requested numeric columns.
