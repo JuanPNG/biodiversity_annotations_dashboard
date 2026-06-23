@@ -1,3 +1,15 @@
+"""
+Callbacks for the Genome Metrics vs Environment page.
+
+This module renders two scatterplots from the same filtered dataset:
+- selected genome metric vs selected climate variable,
+- selected genome metric vs selected distribution variable.
+
+It combines shared global filters with page-local plot controls. The callback
+reads only the needed columns, optionally samples dense result sets, and builds
+Plotly figures using the shared EMBL theme.
+"""
+
 from __future__ import annotations
 
 from typing import Any
@@ -20,6 +32,7 @@ from utils.plotly_theme import apply_embl_theme
 TOTAL_COL = config.TOTAL_GENES_COL
 
 
+# Prepare numeric x/y arrays for trendline fitting, respecting log-axis settings.
 def _prepare_xy_for_fit(
     x: np.ndarray,
     y: np.ndarray,
@@ -38,6 +51,8 @@ def _prepare_xy_for_fit(
     return x_fit, y_fit
 
 
+# Lightweight visual OLS trendline helper.
+# This is intended for exploration, not formal statistical inference.
 def _fit_line_and_curve(
     x: np.ndarray,
     y: np.ndarray,
@@ -61,6 +76,7 @@ def _read_filtered(columns: list[str], gf: dict[str, Any]) -> pd.DataFrame:
     """Read dashboard_main rows after applying global filters."""
     dset = ds.dataset(str(config.DATA_DIR / config.DASHBOARD_MAIN_FN))
 
+    # Unpack shared filters. Missing keys are neutral/no filter.
     tax_map = (gf or {}).get("taxonomy_map") or {}
     climate_cats = (gf or {}).get("climate") or []
     levels = (gf or {}).get("bio_levels") or []
@@ -111,6 +127,7 @@ def _read_filtered(columns: list[str], gf: dict[str, Any]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+# Build one scatterplot figure for a chosen genome metric and X column.
 def _make_fig(
     df: pd.DataFrame,
     xcol: str,
@@ -249,6 +266,9 @@ def _make_fig(
     Input("global-filters", "data"),
     prevent_initial_call=False,
 )
+# Main render callback for both scatterplots.
+# Combines global filters, local plot controls, optional sampling, and Plotly
+# figure construction.
 def render_genome_metric_scatter(
     metric_col,
     x_clim,
@@ -275,6 +295,8 @@ def render_genome_metric_scatter(
     logx_dist = "on" in (logx_dist_val or [])
     logy = "on" in (logy_val or [])
 
+    # Read only columns needed for the selected metric, X variables, and point
+    # sizing option.
     projected = {"species", "accession", metric_col}
     if x_clim:
         projected.add(x_clim)
@@ -287,6 +309,8 @@ def render_genome_metric_scatter(
 
     cap = int(point_cap or 0)
     if cap > 0 and not df.empty:
+        # Optional deterministic sampling keeps dense plots responsive without
+        # changing randomly on every callback run.
         key = f"{metric_col}|{x_clim}|{x_dist}|{gf.get('climate_ranges')}|{gf.get('biogeo_ranges')}|{size_points}"
         df = stable_sample(df, cap, key)
 

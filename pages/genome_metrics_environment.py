@@ -1,3 +1,21 @@
+"""
+Genome Metrics vs Environment page layout.
+
+This module declares controls and plots for comparing genome-level metrics
+against environmental and distribution variables:
+- selected genome metric on the Y axis,
+- climate X-axis plot,
+- distribution X-axis plot,
+- optional OLS trendlines,
+- optional point sizing by total genes,
+- optional log-scale controls,
+- optional point cap for dense plots.
+
+Behavior is registered in callbacks/genome_metrics_environment_callbacks.py.
+Shared filters come from dcc.Store(id="global-filters"); plot controls are
+local to this page.
+"""
+
 from __future__ import annotations
 
 import dash
@@ -5,16 +23,22 @@ from dash import dcc, html
 
 from utils.data_tools import genome_metric_options, ui_label_for_column
 
+# Register this module as the /genome-metrics-environment Dash Pages route.
 dash.register_page(
     __name__,
     path="/genome-metrics-environment",
     name="Genome Metrics vs Environment",
 )
 
+# X-axis variables exposed on this page.
+# Add new options here only after confirming the columns exist in
+# dashboard_main.parquet and have user-facing labels in utils/config.py.
 CLIMATE_X_CHOICES = ["clim_bio1_mean", "clim_bio12_mean"]
 DIST_X_CHOICES = ["range_km2"]
 
 
+# Dash Pages supports callable layouts.
+# This lets metric options be discovered when the page layout is requested.
 def layout():
     metric_options = genome_metric_options()
     default_metric = metric_options[0]["value"] if metric_options else None
@@ -22,6 +46,8 @@ def layout():
     climate_options = [{"label": ui_label_for_column(c), "value": c} for c in CLIMATE_X_CHOICES]
     dist_options = [{"label": ui_label_for_column(c), "value": c} for c in DIST_X_CHOICES]
 
+    # Page-local plot controls. These change the visual encoding but do not
+    # mutate global filters.
     plot_controls_group = html.Details(
         [
             html.Summary("Plot controls", className="filter-summary"),
@@ -198,6 +224,8 @@ def layout():
                 className="prose",
             ),
             plot_controls_group,
+            # Two plots share the same filtered row set: one climate X variable
+            # and one distribution X variable.
             html.Div(
                 className="biotype-env-grid",
                 children=[
