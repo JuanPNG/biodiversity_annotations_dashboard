@@ -1,5 +1,19 @@
+"""
+Small cross-page UI callbacks.
+
+This module handles presentation-only callbacks that are not owned by a single
+dashboard page:
+- global filter summary badges,
+- active navbar link highlighting.
+
+These callbacks read global-filters and route state but do not query data or
+modify filter state.
+"""
+
 from dash import Input, Output, callback
 
+
+# Summarize the active global filter store into compact badge counts.
 @callback(
     Output("tax-summary-badge", "children"),
     Output("climate-summary-badge", "children"),
@@ -39,6 +53,8 @@ def update_filter_badges(gf):
     return str(tax_count), str(climate_count), str(biogeo_count), str(bio_pct_count), str(total)
 
 # --- Active nav link highlight ---
+# Apply the active CSS class to the current navigation link.
+# Add a new output here when adding a new navbar link.
 @callback(
     Output("nav-home", "className"),
     Output("nav-data", "className"),
