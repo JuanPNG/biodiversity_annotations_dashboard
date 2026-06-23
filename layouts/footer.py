@@ -1,6 +1,13 @@
-# layouts/footer.py
+"""
+Shared footer layout.
+
+The footer is mounted once in app.py and appears below every Dash Pages route.
+It contains contact, feedback, and project partner information.
+"""
 from dash import html
 
+
+# Build the footer component used by the app shell.
 def get_footer() -> html.Footer:
     return html.Footer(
         [
