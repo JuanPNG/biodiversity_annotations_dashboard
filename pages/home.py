@@ -1,4 +1,16 @@
-# pages/home.py
+"""
+Home page layout.
+
+This module declares the landing page:
+- introductory text,
+- filtered KPI cards,
+- navigation cards for the main dashboard pages,
+- feedback/contact links.
+
+The KPI card values are populated by callbacks/home_kpis.py.
+Shared filters come from dcc.Store(id="global-filters").
+"""
+
 from __future__ import annotations
 import dash
 
@@ -8,6 +20,7 @@ from dash import dcc, html
 
 
 # Introduction
+# Static introduction shown above the filtered data summaries.
 intro = html.Section(
             [
                 html.H1("Welcome", className="home-section-title"),
@@ -39,6 +52,7 @@ intro = html.Section(
         )
 
 # KPIs: overview of filtered data.
+# KPI placeholders. Values are filled by callbacks/home_kpis.py using global filters.
 kpis = html.Section(
             [
                 html.H2("Key figures", className="home-section-title"),
@@ -77,6 +91,7 @@ kpis = html.Section(
         )
 
 # Navigation cards
+# Navigation cards mirror the main navbar and help users discover dashboard sections.
 nav_cards = html.Div(
     [
         dcc.Link(
@@ -134,6 +149,7 @@ pages_desc = html.Section(
 
 
 # Page layout (three sections)
+# Dash Pages reads this layout when serving the home route.
 layout = html.Main(
     [
         # 1) Intro

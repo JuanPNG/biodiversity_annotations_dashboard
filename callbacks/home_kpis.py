@@ -1,3 +1,16 @@
+"""
+Callbacks for Home page KPIs.
+
+This module computes filtered overview metrics from the shared global filter
+store, including:
+- distinct taxonomy counts,
+- distinct biogeography counts,
+- total annotated genes,
+- top gene biotypes.
+
+The callback reads global-filters but does not modify it.
+"""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -21,6 +34,7 @@ from utils.data_tools import (
 )
 
 
+# Recompute all Home KPI cards whenever the shared global filter store changes.
 @callback(
     Output("kpi-kingdom", "children"),
     Output("kpi-phylum", "children"),
@@ -41,6 +55,7 @@ def update_home_kpis(gf):
     """Compute and update Home page KPIs using the active global filters.
     When no filters are provided, compute unfiltered KPIs.
     """
+    # Missing store data means no active filters.
     gf = gf or {}
     tax_map = gf.get("taxonomy_map") or {}
     climate_labels = gf.get("climate") or []
@@ -51,6 +66,7 @@ def update_home_kpis(gf):
     biogeo_ranges = gf.get("biogeo_ranges") or None
 
     # --- Taxonomy distinct counts (per configured rank) ---
+    # Count distinct values at each configured taxonomy rank under current filters.
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
     tax_counts: list[int] = []
     for col in ranks:
@@ -69,6 +85,8 @@ def update_home_kpis(gf):
         tax_counts.append(0)
 
     # --- Accessions under current filters (for biogeo distincts) ---
+    # Resolve filtered accessions once so biogeography summaries can be computed
+    # from biogeo_long.parquet.
     accession_ids = kpi_filtered_accessions(
         taxonomy_filter_map=tax_map,
         climate_filter=climate_labels,
@@ -83,6 +101,8 @@ def update_home_kpis(gf):
     realm_cnt, biome_cnt, ecoregion_cnt = kpi_biogeo_distinct_counts(accession_ids)
 
     # --- Total genes (pushdown fast path; fallback to row-mask) ---
+    # Sum total annotated genes under the current filter state.
+    # If biotype percentage filtering cannot be pushed down, apply the row mask in pandas.
     main = _dataset(config.DATA_DIR / config.DASHBOARD_MAIN_FN)
     total_genes = "0"
     if main and config.TOTAL_GENES_COL in main.schema.names:
@@ -125,6 +145,7 @@ def update_home_kpis(gf):
             total_col = config.TOTAL_GENES_COL
             pct_min = pct_max = None
 
+            # Rank biotypes by total count under the current filters.
             if biotype_pct and biotype_pct.get("biotype"):
                 sfx = config.GENE_BIOTYPE_COUNT_SUFFIX or "_count"
                 pref = config.GENE_BIOTYPE_PREFIX or ""
