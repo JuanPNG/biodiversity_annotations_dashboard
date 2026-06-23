@@ -1,9 +1,26 @@
+"""
+Data Browser page layout.
+
+This module declares the Data Browser UI:
+- column preset controls,
+- selectable columns,
+- pagination controls,
+- status text,
+- Dash AG Grid table.
+
+The page does not load data directly. Its behavior is registered in
+callbacks/data_browser_callbacks.py, which reads global-filters and delegates
+Parquet access to utils/parquet_io.py.
+"""
+
 from __future__ import annotations
 
 import dash
 from dash import html, dcc
 import dash_ag_grid as dag
 
+# AG Grid receives column definitions and row data from callbacks.
+# Server-side filtering/paging is handled before data reaches this component.
 dash.register_page(__name__, path="/data-browser", name="Data Browser")
 
 layout = html.Main(

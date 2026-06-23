@@ -1,3 +1,17 @@
+"""
+Callbacks for the Data Browser page.
+
+This module connects the Data Browser controls to processed Parquet data:
+- initialize column presets and schema-derived column options,
+- apply selected presets,
+- reset pagination when filters/columns change,
+- fetch one filtered page for Dash AG Grid,
+- build AG Grid column definitions,
+- update the selected-column badge.
+
+The global filter store is read here but not modified.
+"""
+
 from dash import Input, Output, State, callback, no_update
 
 from utils import config
@@ -15,6 +29,7 @@ from utils.data_tools import (
 )
 
 # 1) Init: preset list + columns list (do NOT set db-columns.value here)
+# Initialize schema-dependent controls when the app loads or route changes.
 @callback(
     Output("db-col-preset", "options"),
     Output("db-col-preset", "value"),
@@ -39,6 +54,7 @@ def init_presets_and_columns(_):
 
 
 # 2) Apply preset -> sole writer to db-columns.value (runs on load and on change)
+# Presets are resolved against the live Parquet schema so missing columns are ignored safely.
 @callback(
     Output("db-columns", "value"),
     Input("db-col-preset", "value"),
@@ -55,6 +71,8 @@ def apply_preset(preset_name):
 
 
 # 3) Changing filters or columns resets page to 1 (keep UX predictable)
+# Changing filters or visible columns can invalidate the current page number.
+# Resetting to page 1 keeps the grid result predictable.
 @callback(
     Output("db-page", "value"),
     Input("global-filters", "data"),
@@ -67,6 +85,9 @@ def reset_page_on_change(_filters, _cols, current_page):
 
 
 # 4) Fetch a single page; include total count if available
+# Main Data Browser render callback.
+# Reads global-filters, fetches one filtered Parquet page, formats URL columns,
+# and returns AG Grid-compatible column definitions and rows.
 @callback(
     Output("db-grid", "columnDefs"),
     Output("db-grid", "rowData"),
@@ -78,6 +99,8 @@ def reset_page_on_change(_filters, _cols, current_page):
     prevent_initial_call=False,
 )
 def update_grid(global_filters, page_value, page_size, selected_columns):
+    # Unpack the shared global filter contract.
+    # Missing keys are treated as neutral/no filter.
     taxonomy_map   = (global_filters or {}).get("taxonomy_map") or {}
     climate        = (global_filters or {}).get("climate") or []
     levels         = (global_filters or {}).get("bio_levels") or []
@@ -102,6 +125,7 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
 
     # Load page
     try:
+        # Delegate filtering, projection, and paging to the Parquet I/O layer.
         df, returned_rows = load_dashboard_page(
             columns=display_cols,
             page=page,
@@ -117,7 +141,7 @@ def update_grid(global_filters, page_value, page_size, selected_columns):
     except Exception as e:
         return no_update, no_update, f"Error loading data: {e}"
 
-    # Convert URL strings → Markdown links (clickable in the grid)
+    # Convert configured URL columns to Markdown so AG Grid renders clickable links.
     url_cols = [c for c in display_cols if c in url_set and c in df.columns]
     for c in url_cols:
         df[c] = df[c].map(db_to_markdown_link)
