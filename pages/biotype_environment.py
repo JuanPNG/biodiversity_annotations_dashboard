@@ -1,4 +1,21 @@
-# pages/biotype_environment.py
+"""
+Biotype vs Environment page layout.
+
+This module declares controls and plots for comparing gene biotype abundance
+against environmental and distribution variables:
+- selected gene biotypes,
+- Y-axis metric,
+- optional OLS trendlines,
+- optional point sizing by total genes,
+- log-scale controls,
+- climate X-axis plot,
+- distribution X-axis plot.
+
+Behavior is registered in callbacks/biotype_environment_callbacks.py.
+Shared filters come from dcc.Store(id="global-filters"); plot controls are
+local to this page.
+"""
+
 from __future__ import annotations
 
 import dash
@@ -12,16 +29,22 @@ dash.register_page(
     name="Biotype vs Environment",
 )
 
-# X options (feel free to extend later)
+# X-axis variables exposed on this page.
+# Add new options here only after confirming the columns exist in dashboard_main.parquet
+# and have user-facing labels in utils/config.py.
 CLIMATE_X_CHOICES = ["clim_bio1_mean", "clim_bio12_mean"]
-DIST_X_CHOICES = ["range_km2"]  # you can add mean_elevation later
+DIST_X_CHOICES = ["range_km2"]  # TODO: you can add mean_elevation later
 
 
+# Dash Pages supports callable layouts.
+# This lets options be built when the page layout is requested.
 def layout():
     # Labels
     climate_options = [{"label": ui_label_for_column(c), "value": c} for c in CLIMATE_X_CHOICES]
     dist_options = [{"label": ui_label_for_column(c), "value": c} for c in DIST_X_CHOICES]
+
     # --- Plot controls (collapsible) ---
+    # Page-local plot controls. These change the visual encoding but do not mutate global filters.
     plot_controls_group = html.Details(
         [
             html.Summary("Plot controls", className="filter-summary"),
@@ -222,6 +245,7 @@ def layout():
                     html.Section(
                         className="biotype-env-panel",
                         children=[
+                            # Climate scatterplot. The callback provides the full Plotly figure.
                             dcc.Graph(
                                 id="bs-fig-climate",
                                 config={"displayModeBar": False, "responsive": True},
@@ -232,6 +256,7 @@ def layout():
                     html.Section(
                         className="biotype-env-panel",
                         children=[
+                            # Distribution scatterplot. It shares the same filtered row set as the climate plot.
                             dcc.Graph(
                                 id="bs-fig-dist",
                                 config={"displayModeBar": False, "responsive": True},

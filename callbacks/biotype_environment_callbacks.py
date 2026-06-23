@@ -1,3 +1,15 @@
+"""
+Callbacks for the Biotype vs Environment page.
+
+This module renders two scatterplots from the same filtered dataset:
+- biotype count vs selected climate variable,
+- biotype count vs selected distribution variable.
+
+It combines shared global filters with page-local plot controls. The callback
+materialises the requested Y metric, optionally samples dense result sets, and
+builds Plotly figures.
+"""
+
 from typing import List
 import numpy as np
 import pandas as pd
@@ -23,6 +35,7 @@ TOTAL_COL    = config.TOTAL_GENES_COL
 EXCLUDE_SET  = set(config.GENE_BIOTYPE_EXCLUDE or ())
 
 
+# Prepare numeric x/y arrays for trendline fitting, respecting log-axis settings.
 def _prepare_xy_for_fit(x: np.ndarray, y: np.ndarray, logx: bool, logy: bool) -> tuple[np.ndarray, np.ndarray]:
     x = np.asarray(x, dtype=float)
     y = np.asarray(y, dtype=float)
@@ -35,6 +48,9 @@ def _prepare_xy_for_fit(x: np.ndarray, y: np.ndarray, logx: bool, logy: bool) ->
     Y = np.log10(y[mask]) if logy else y[mask]
     return X, Y
 
+
+# Lightweight visual OLS trendline helper.
+# This is intended for exploration, not formal statistical inference.
 def _fit_line_and_curve(x: np.ndarray, y: np.ndarray, logx: bool, logy: bool) -> tuple[np.ndarray, np.ndarray] | None:
     X, Y = _prepare_xy_for_fit(x, y, logx, logy)
     if X.size < 2:
@@ -46,9 +62,12 @@ def _fit_line_and_curve(x: np.ndarray, y: np.ndarray, logx: bool, logy: bool) ->
     y_line = (10 ** ys) if logy else ys
     return x_line, y_line
 
+
+# Read the columns needed for both scatterplots under the shared global filter contract.
 def _read_filtered(columns: List[str], gf: dict) -> pd.DataFrame:
     dset = ds.dataset(str(config.DATA_DIR / config.DASHBOARD_MAIN_FN))
 
+    # Unpack shared filters. Missing keys are neutral/no filter.
     tax_map = (gf or {}).get("taxonomy_map") or {}
     climate_cats = (gf or {}).get("climate") or []
     levels = (gf or {}).get("bio_levels") or []
@@ -86,6 +105,8 @@ def _read_filtered(columns: List[str], gf: dict) -> pd.DataFrame:
         return pd.DataFrame(columns=columns)
     return pd.concat(frames, ignore_index=True)
 
+
+# Build one scatterplot figure for a chosen X column and selected biotype columns.
 def _make_fig(
     df: pd.DataFrame,
     xcol: str,
@@ -179,6 +200,7 @@ def _make_fig(
     return fig
 
 
+# Populate selectable biotypes from detected *_percentage columns.
 @callback(
     Output("bs-biotypes", "options"),
     Output("bs-biotypes", "value"),
@@ -199,6 +221,9 @@ def init_biotypes(_):
     return opts, default_values
 
 
+# Main render callback for both scatterplots.
+# Combines global filters, local plot controls, metric calculation, optional sampling,
+# and Plotly figure construction.
 @callback(
     Output("bs-fig-climate", "figure"),
     Output("bs-fig-dist", "figure"),
@@ -227,6 +252,7 @@ def render_scatter(biotype_cols, y_metric, reg_flags, size_flags, point_cap,
         return empty, empty, "Select at least one biotype."
 
     # Which Y values to read & label
+    # Decide which source columns are needed for the requested Y metric.
     if y_metric == "percentage":
         y_cols_to_project = biotype_cols[:]  # *_percentage
         y_axis_title = "Gene biotype (%)"
@@ -253,7 +279,9 @@ def render_scatter(biotype_cols, y_metric, reg_flags, size_flags, point_cap,
 
     df = _read_filtered(sorted(proj), gf).copy()
 
-    # Materialize chosen Y metric into *_percentage-named columns for uniform plotting
+    # Materialise chosen Y metric into *_percentage-named columns for uniform plotting
+    # Convert raw count or per-1k selections into percentage-column names so plotting code
+    # can treat all metrics uniformly.
     def _materialize_y(df_in: pd.DataFrame, cols_pct: list[str], metric: str) -> tuple[pd.DataFrame, list[str]]:
         df_out = df_in.copy()
         keep: list[str] = []
@@ -281,6 +309,8 @@ def render_scatter(biotype_cols, y_metric, reg_flags, size_flags, point_cap,
     df, biotype_cols = _materialize_y(df, biotype_cols, y_metric)
 
     # Stable optional sampling
+    # Optional deterministic sampling keeps dense plots responsive without changing randomly
+    # on every callback run.
     cap = int(point_cap or 0)
     if cap > 0 and not df.empty:
         key = f"{sorted(biotype_cols)}|{x_clim}|{x_dist}|{gf.get('climate_ranges')}|{gf.get('biogeo_ranges')}|{y_metric}|{size_points}"
