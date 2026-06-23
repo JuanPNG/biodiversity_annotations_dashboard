@@ -1,17 +1,21 @@
-# utils/data_tools.py
-# -----------------------------------------------------------------------------
-# Utilities for packing/pruning the global filters store and small UI helpers.
-# Keep pure functions here (no side effects); callbacks should stay thin and
-# delegate to these helpers. See utils/types.GlobalFilters for the contract.
-#
-# Sections:
-# - Common option builders (taxonomy, climate, biogeo)
-# - Taxonomy cascade helpers
-# - Home KPIs helpers
-# - Data Browser helpers
-# - Biotype vs Environment helpers
-# - Biotype by Taxa helpers
-# -----------------------------------------------------------------------------
+"""
+Pure helper functions used by callbacks and pages.
+
+This module sits between Dash callback wiring and lower-level Parquet access.
+It contains logic that is easier to test outside Dash, including:
+- global filter store packing and pruning helpers,
+- taxonomy cascade option helpers,
+- UI label helpers,
+- Data Browser column helpers,
+- Home KPI helper logic,
+- Biotype vs Environment transformation helpers,
+- Genome Annotations drilldown helpers.
+
+Keep callback functions thin by moving reusable, deterministic logic here.
+Keep direct Parquet scanning in utils/parquet_io.py unless the helper is only
+wrapping an existing parquet_io function.
+"""
+
 import math
 from functools import lru_cache
 from typing import Iterable, Mapping, Sequence
@@ -55,7 +59,7 @@ def _dataset(path: Path | str) -> ds.Dataset | None:
 # ---------------------------------------------------------------------------
 # Common option builders (taxonomy, climate, biogeo)
 # ---------------------------------------------------------------------------
-
+# Resolve configured Data Browser preset patterns into concrete schema columns.
 def resolve_preset_columns(
         all_columns: list[str],
         patterns: Iterable[str]
@@ -157,6 +161,8 @@ def list_rank_values_with_filters(
     return [{"label": v, "value": v} for v in values]
 
 
+# Build valid dropdown options for each taxonomy rank under broader-rank selections.
+# Used by callbacks/global_filters.py to keep the cascade consistent.
 def list_taxonomy_options_cascaded(
         selections: dict[str, Sequence[str]] | None
 ) -> dict[str, list[dict]]:
@@ -178,7 +184,10 @@ def list_taxonomy_options_cascaded(
 # ---------------------------------------------------------------------------
 # Global Filters helpers (used by callbacks/global_filters.py)
 # ---------------------------------------------------------------------------
+# These helpers define the packing rules for dcc.Store(id="global-filters").
+# They are intentionally pure and covered by tests.
 
+# Normalize Dash dropdown values into stable non-empty string lists.
 def gf_clean_list(v: Sequence[str | None]) -> list[str]:
     """
     Normalize a user-supplied list by:
@@ -204,6 +213,8 @@ def gf_clean_list(v: Sequence[str | None]) -> list[str]:
     return res
 
 
+# Full-span sliders mean "no active filter".
+# This keeps neutral slider values out of the global filter store.
 def gf_is_full_span(lo: float, hi: float, span_lo: float, span_hi: float, tol: float = 0.0) -> bool:
     """
     Strict full-span check.
@@ -274,6 +285,7 @@ def gf_build_biogeo_ranges(
         pass
     return out
 
+
 def gf_build_taxonomy_map_from_values(
         ranks: Sequence[TaxRank] | Sequence[str],
         values_by_rank: Mapping[TaxRank, Sequence[str]] | Mapping[str, Sequence[str]]
@@ -290,6 +302,7 @@ def gf_build_taxonomy_map_from_values(
         if vals:
             tmap[r] = vals
     return tmap
+
 
 def gf_build_biotype_pct(
         biotype: str | None,
@@ -308,6 +321,8 @@ def gf_build_biotype_pct(
     return {"biotype": str(biotype), "min": lo, "max": hi}
 
 
+# Final store packer.
+# Only non-empty/narrowed values are included so missing keys mean "no filter".
 def gf_build_store(
     taxonomy_map: TaxonomyMap | None = None,
     climate_labels: Sequence[str] | None = None,
@@ -389,6 +404,7 @@ def kpi_format_int(n) -> str:
         return str(n)
 
 
+# Resolve the current global filter state to the accession set used by Home KPIs.
 def kpi_filtered_accessions(
     taxonomy_filter_map: dict[str, Sequence[str]] | None,
     climate_filter: Sequence[str] | None,
@@ -479,6 +495,8 @@ def db_to_markdown_link(v: str) -> str:
     return f"[{label}]({href})"
 
 
+# Convert a DataFrame schema into AG Grid column definitions.
+# URL columns are rendered with Dash AG Grid's Markdown cell renderer.
 def db_make_column_defs(df: pd.DataFrame) -> list[dict]:
     """Build dash-ag-grid columnDefs with URL columns using markdown renderer."""
     url_cols = set(getattr(config, "URL_COLUMNS", []) or [])
@@ -522,6 +540,9 @@ def _pretty_metric_name(name: str) -> str:
 
     return name.replace("_", " ")
 
+
+# Shared display-label lookup.
+# Add labels in utils/config.py rather than hard-coding them in page layouts.
 def ui_label_for_column(col: str) -> str:
     """
     Return a human-readable label for dashboard columns.
@@ -592,6 +613,7 @@ def genome_metric_options() -> list[dict[str, str]]:
 # Biotype vs Environment helpers (used by callbacks/biotype_environment_callbacks.py)
 # ---------------------------------------------------------------------------
 
+# Cached convenience wrapper for available *_percentage biotype columns.
 @lru_cache(maxsize=1)
 def biotype_pct_columns() -> list[str]:
     colmap = list_biotype_columns()
@@ -620,6 +642,8 @@ def sizes_from_total(total: pd.Series) -> np.ndarray:
     return 6.0 + 10.0 * np.sqrt(norm)  # 6–16 px
 
 
+# Deterministic down-sampling for dense scatterplots.
+# The key keeps repeated renders stable for the same filter/control state.
 def stable_sample(df: pd.DataFrame, n: int, key: str) -> pd.DataFrame:
     if n <= 0 or len(df) <= n:
         return df
@@ -655,6 +679,8 @@ def ga_prev_rank(current: str | None) -> str | None:
     return ranks[i - 1] if i - 1 >= 0 else None
 
 
+# Merge Genome Annotations drilldown state into the same taxonomy_map shape
+# used by global filters, so downstream Parquet queries do not need special cases.
 def ga_apply_drill_to_taxonomy_map(
     drill_path: list[dict] | None,
     taxonomy_map: TaxonomyMap | None,
@@ -710,7 +736,6 @@ def ga_apply_drill_to_taxonomy_map(
             tmap[r] = existing
 
     return tmap
-
 
 
 # Explicit public API (import surfaces used across callbacks/pages)
