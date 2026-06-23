@@ -1,4 +1,12 @@
-# utils/types.py
+"""
+Shared type aliases for dashboard filter state.
+
+These types document the shape of the cross-page global filter store and related
+helper values. They are especially useful because Dash stores are plain dicts at
+runtime, so the type aliases serve as maintainable documentation for callbacks
+and utility functions.
+"""
+
 from typing import Literal, TypedDict
 
 
