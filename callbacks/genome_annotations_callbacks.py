@@ -1,3 +1,14 @@
+"""
+Callbacks for the Genome Annotations page.
+
+This module manages two kinds of state:
+- shared global filters from dcc.Store(id="global-filters"),
+- page-local drill state from dcc.Store(id="ga-drill").
+
+The chart groups filtered rows by the selected taxonomy rank and shows each
+gene biotype as a percentage of the group's total annotated genes.
+"""
+
 import plotly.graph_objects as go
 from dash import Input, Output, State, callback, no_update, ctx
 
@@ -11,6 +22,8 @@ from utils.data_tools import (
 from utils.plotly_theme import apply_embl_theme
 
 # ---------- Drill handler (click bar to go deeper; buttons to navigate) ----------
+# Page-local drill state machine.
+# Clicks add a focused taxonomy value to the path; buttons move up/down/reset.
 @callback(
     Output("ga-drill", "data", allow_duplicate=True),
     Output("ga-rank", "value", allow_duplicate=True),
@@ -30,6 +43,7 @@ def handle_drill(clickData, _up_clicks, _down_clicks, _reset_clicks, rank_value,
     ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
     default_rank = "kingdom" if "kingdom" in ranks else (ranks[0] if ranks else None)
     cur_rank = rank_value or default_rank
+    # Dash tells us which input fired so one callback can handle clicks and buttons.
     trig = ctx.triggered_id
 
     # CLICK: focus on clicked group and drill down one level
@@ -68,6 +82,7 @@ def handle_drill(clickData, _up_clicks, _down_clicks, _reset_clicks, rank_value,
 
 
 # ---------- Chart ----------
+# Render the stacked biotype chart from shared filters plus page-local drill state.
 @callback(
     Output("ga-chart", "figure"),
     Output("ga-status", "children"),
@@ -84,6 +99,7 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
     if not group_rank:
         group_rank = "kingdom" if "kingdom" in ranks else (ranks[0] if ranks else None)
 
+    # Unpack shared filters. Missing keys mean neutral/no filter.
     taxonomy_map = (global_filters or {}).get("taxonomy_map") or {}
     levels       = (global_filters or {}).get("bio_levels") or []
     values       = (global_filters or {}).get("bio_values") or []
@@ -93,10 +109,12 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
 
     # Apply the drill selections as additional taxonomy filters
     drill = (drill_store or {}).get("path", [])
+    # Convert page-local drill path into the same taxonomy_map shape used by global filters.
     taxonomy_map = ga_apply_drill_to_taxonomy_map(drill, taxonomy_map)
 
     # Summarize -> % per group from *_count (normalized by total_gene_biotypes if present)
     try:
+        # Delegate filtered grouping and biotype percentage calculation to the Parquet I/O layer.
         df = summarize_biotypes_by_rank(
             group_rank=group_rank,
             biotype_cols=None,               # include all *_count biotypes
@@ -172,6 +190,8 @@ def update_biotype_bar(global_filters, group_rank, drill_store):
 
 
 # ---------- Sync GA rank with global taxonomy selections ----------
+# Keep the chart rank aligned with explicit global taxonomy selections.
+# This avoids showing a broader grouping when the user has already selected a deeper rank.
 @callback(
     Output("ga-rank", "value", allow_duplicate=True),
     Output("ga-drill", "data", allow_duplicate=True),

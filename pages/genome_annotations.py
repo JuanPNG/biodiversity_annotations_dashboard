@@ -1,9 +1,24 @@
-# pages/genome_annotations.py
+"""
+Genome Annotations page layout.
+
+This module declares the UI for exploring gene biotype composition by taxonomy:
+- rank selector,
+- drill up/down/reset controls,
+- status and breadcrumb text,
+- stacked bar chart,
+- page-local stores for drill state.
+
+The chart behavior is registered in callbacks/genome_annotations_callbacks.py.
+Shared filters come from dcc.Store(id="global-filters"); drill state is local
+to this page.
+"""
+
 from __future__ import annotations
 import dash
 from dash import html, dcc
 from utils import config
 
+# Register this module as the /genome-annotations Dash Pages route.
 dash.register_page(__name__, path="/genome-annotations", name="Biotypes by Taxa")
 
 _ranks = list(config.TAXONOMY_RANK_COLUMNS or [])
@@ -56,6 +71,8 @@ layout = html.Main(
         dcc.Graph(id="ga-chart", figure={"data": [], "layout": {"height": 560}}),
 
         # Drill state
+        # Page-local state used only by Genome Annotations.
+        # This is separate from the cross-page global-filters store.
         dcc.Store(id="ga-drill", data={"path": []}, storage_type="memory"),
         dcc.Store(id="ga-selected-group", data={}, storage_type="memory"),
         dcc.Store(id="ga-current-groups", data=[], storage_type="memory"),
