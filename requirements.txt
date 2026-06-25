@@ -1,8 +1,7 @@
-dash>=3
-dash-ag-grid>=32.2
-plotly>=5.20
+dash==3.2.0
+plotly==6.3.0
 pandas>=2.2
 pyarrow>=15
-dash_ag_grid~=32.3.1
+dash_ag_grid==32.3.1
 pytest~=8.4.1
-numpy~=2.3.2
+numpy~=2.3.2r4
